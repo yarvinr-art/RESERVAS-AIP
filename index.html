@@ -18,17 +18,34 @@ body {
   color:white;
 }
 
+body::before {
+  content:"";
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.5);
+  z-index:-1;
+}
+
 .header {
   padding:20px;
 }
 
+.header img {
+  width:120px;
+  border-radius:10px;
+  margin-bottom:10px;
+}
+
 .header h1 {
-  font-size:22px;
+  font-size:20px;
   margin:5px;
 }
 
 .header h3 {
-  font-size:16px;
+  font-size:15px;
   font-weight:normal;
   margin:5px;
 }
@@ -49,8 +66,10 @@ select, button {
 }
 
 button {
-  background:#3498db;
+  background:#e74c3c;
   color:white;
+  font-weight:bold;
+  cursor:pointer;
 }
 
 .grid {
@@ -75,6 +94,7 @@ button {
 <body>
 
 <div class="header">
+  <img src="logo.jpeg">
   <h1>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h1>
   <h3>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h3>
 </div>
@@ -86,35 +106,30 @@ button {
 <select id="docente">
 <option value="">Selecciona tutor</option>
 
-<!-- 1° -->
 <option>1° A - ARUHUANCA CCOPA HIPOLITO</option>
 <option>1° B - VERA PALOMINO RINA ESTHER</option>
 <option>1° C - FLORES BERROCAL MIGUEL ANGEL</option>
 <option>1° D - JUMPA CAMPUZANO SILVIA JACKELINE</option>
 <option>1° E - LUNA GUERRA WALTER RAFAEL</option>
 
-<!-- 2° -->
 <option>2° A - CANDIA AGUILAR MARCO ANTONIO</option>
 <option>2° B - CHAVEZ MALAVER CARMEN ELIZABETH</option>
 <option>2° C - ABANTO LEON IRMA</option>
 <option>2° D - HUAMAN YALICO IRMA FAUSTINA</option>
 <option>2° E - CASTILLO ROMAN MARIA LIZZI</option>
 
-<!-- 3° -->
 <option>3° A - TARRILLO TEJADA FAUSTO</option>
 <option>3° B - WONG DELGADO NIDIA ANGELICA</option>
 <option>3° C - MAURICIO PERALES LUCIO</option>
 <option>3° D - GAMERO AGUILAR CESAR AUGUSTO</option>
 <option>3° E - DE LA CRUZ MARIA</option>
 
-<!-- 4° -->
 <option>4° A - RUA CARDENAS LISSET ROSALIA</option>
 <option>4° B - MALAVER DIONICIO ERIKA VERONICA</option>
 <option>4° C - CAMONES PULIDO LEDGARDO</option>
 <option>4° D - MARTINEZ DURAND ZOILA LILIANA</option>
 <option>4° E - CAMONES PULIDO LEDGARDO</option>
 
-<!-- 5° -->
 <option>5° A - AZURIN SANTE ELVIS</option>
 <option>5° B - LINDO CASTRO JAVIER ALEXIS</option>
 <option>5° C - VERA INGA MANUEL</option>
