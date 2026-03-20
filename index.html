@@ -1,5 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reserva AIP</title>
+
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<style>
+body {
+  font-family: Arial;
+  text-align:center;
+  background:#f4f6f9;
+}
+
+h2 {
+  color:#2c3e50;
+}
+
+select, button {
+  padding:10px;
+  margin:10px;
+  border-radius:8px;
+  border:none;
+}
+
+button {
+  background:#3498db;
+  color:white;
+  cursor:pointer;
+}
+
+.grid {
+  display:grid;
+  grid-template-columns: repeat(6,1fr);
+  gap:5px;
+  margin:20px;
+}
+
+.slot {
+  background:#2ecc71;
+  color:white;
+  padding:10px;
+  cursor:pointer;
+  border-radius:6px;
+}
+
+.ocupado {
+  background:#e74c3c;
+}
+
+.recreo {
+  background:#95a5a6;
+}
+
+.seleccionado {
+  background:#f39c12;
+}
+
+.footer {
+  margin-top:20px;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<h2>📅 Reserva Aula de Innovación</h2>
+
+<select id="docente">
+<option value="">Selecciona tutor</option>
+
+<option value="1A - ARUHUANCA CCOPA HIPOLITO">1° A - ARUHUANCA CCOPA HIPOLITO</option>
+<option value="1B - VERA PALOMINO RINA">1° B - VERA PALOMINO RINA</option>
+<option value="1C - FLORES BERROCAL MIGUEL">1° C - FLORES BERROCAL MIGUEL</option>
+<option value="1D - JUMPA CAMPUZANO SILVIA">1° D - JUMPA CAMPUZANO SILVIA</option>
+<option value="1E - LUNA GUERRA WALTER">1° E - LUNA GUERRA WALTER</option>
+
+<option value="2A - CANDIA AGUILAR MARCO">2° A - CANDIA AGUILAR MARCO</option>
+<option value="2B - CHAVEZ MALAVER CARMEN">2° B - CHAVEZ MALAVER CARMEN</option>
+<option value="2C - ABANTO LEON IRMA">2° C - ABANTO LEON IRMA</option>
+<option value="2D - HUAMAN YALICO IRMA">2° D - HUAMAN YALICO IRMA</option>
+<option value="2E - CASTILLO ROMAN MARIA">2° E - CASTILLO ROMAN MARIA</option>
+
+<option value="3A - TARRILLO TEJADA FAUSTO">3° A - TARRILLO TEJADA FAUSTO</option>
+<option value="3B - WONG DELGADO NIDIA">3° B - WONG DELGADO NIDIA</option>
+<option value="3C - MAURICIO PERALES LUCIO">3° C - MAURICIO PERALES LUCIO</option>
+<option value="3D - GAMERO AGUILAR CESAR">3° D - GAMERO AGUILAR CESAR</option>
+<option value="3E - DE LA CRUZ MARIA">3° E - DE LA CRUZ MARIA</option>
+
+<option value="4A - RUA CARDENAS LISSET">4° A - RUA CARDENAS LISSET</option>
+<option value="4B - MALAVER DIONICIO ERIKA">4° B - MALAVER DIONICIO ERIKA</option>
+<option value="4C - CAMONES PULIDO LEDGARDO">4° C - CAMONES PULIDO LEDGARDO</option>
+<option value="4D - MARTINEZ DURAND ZOILA">4° D - MARTINEZ DURAND ZOILA</option>
+<option value="4E - CAMONES PULIDO LEDGARDO">4° E - CAMONES PULIDO LEDGARDO</option>
+
+<option value="5A - AZURIN SANTE ELVIS">5° A - AZURIN SANTE ELVIS</option>
+<option value="5B - LINDO CASTRO JAVIER">5° B - LINDO CASTRO JAVIER</option>
+<option value="5C - VERA INGA MANUEL">5° C - VERA INGA MANUEL</option>
+<option value="5D - CONTRATO EPT">5° D - CONTRATO EPT</option>
+
+</select>
+
+<br>
+<button onclick="reservar()">Reservar</button>
+
+<div class="grid" id="tabla"></div>
+
+<div class="footer">
+PIP: YARVIN RS
+</div>
+
+<script>
+
 const firebaseConfig = {
   apiKey: "A...",
   authDomain: "ingreso-al-aip---2026.firebaseapp.com",
@@ -9,47 +125,6 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reserva AIP</title>
-
-<style>
-body { font-family: Arial; text-align:center; }
-
-.grid {
-  display:grid;
-  grid-template-columns: repeat(6,1fr);
-  gap:5px;
-  margin:20px;
-}
-
-.slot { background:green; color:white; padding:10px; cursor:pointer; }
-.ocupado { background:red; }
-.recreo { background:gray; }
-.seleccionado { background:orange; }
-
-</style>
-</head>
-
-<body>
-
-<h2>Reserva AIP</h2>
-
-<select id="docente">
-<option value="">Selecciona docente</option>
-<option value="Juan Pérez|Comunicación">Juan Pérez - Comunicación</option>
-<option value="María López|Matemática">María López - Matemática</option>
-</select>
-
-<br><br>
-<button onclick="reservar()">Reservar</button>
-
-<div class="grid" id="tabla"></div>
-
-<script>
 
 const dias = ["Hora","Lunes","Martes","Miércoles","Jueves","Viernes"];
 
@@ -79,16 +154,18 @@ horas.forEach(h=>{
         div.className="recreo";
       }else{
         div.className="slot";
-div.dataset.id = d + "-" + h;
+        div.dataset.id = d + "-" + h;
 
-db.ref("reservas/"+div.dataset.id).on("value", snap=>{
-  if(snap.exists()){
-    div.classList.add("ocupado");
-    div.innerText = snap.val().nombre;
-  }
-});
+        db.ref("reservas/"+div.dataset.id).on("value", snap=>{
+          if(snap.exists()){
+            div.classList.add("ocupado");
+            div.innerText = snap.val().nombre;
+          }
+        });
 
         div.onclick=()=>{
+          if(div.classList.contains("ocupado")) return;
+
           div.classList.toggle("seleccionado");
 
           if(seleccionados.includes(div)){
@@ -107,16 +184,19 @@ db.ref("reservas/"+div.dataset.id).on("value", snap=>{
 function reservar(){
   const docente=document.getElementById("docente").value;
 
-  if(!docente) return alert("Selecciona docente");
+  if(!docente) return alert("Selecciona tutor");
   if(seleccionados.length===0) return alert("Selecciona horario");
 
   seleccionados.forEach(slot=>{
-    slot.classList.remove("seleccionado");
-    slot.classList.add("ocupado");
-    slot.innerText = docente.split("|")[0];
+    const id = slot.dataset.id;
+
+    db.ref("reservas/"+id).set({
+      nombre: docente,
+      fecha: new Date().toLocaleString()
+    });
   });
 
-  alert("Reserva realizada");
+  alert("Reserva confirmada");
   seleccionados=[];
 }
 
