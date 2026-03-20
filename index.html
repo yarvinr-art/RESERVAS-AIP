@@ -1,3 +1,14 @@
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+const firebaseConfig = {
+  apiKey: "A...",
+  authDomain: "ingreso-al-aip---2026.firebaseapp.com",
+  databaseURL: "https://ingreso-al-aip---2026-default-rtdb.firebaseio.com",
+  projectId: "ingreso-al-aip---2026"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -68,6 +79,14 @@ horas.forEach(h=>{
         div.className="recreo";
       }else{
         div.className="slot";
+div.dataset.id = d + "-" + h;
+
+db.ref("reservas/"+div.dataset.id).on("value", snap=>{
+  if(snap.exists()){
+    div.classList.add("ocupado");
+    div.innerText = snap.val().nombre;
+  }
+});
 
         div.onclick=()=>{
           div.classList.toggle("seleccionado");
