@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reserva AIP</title>
+
+<style>
+body { font-family: Arial; text-align:center; }
+
+.grid {
+  display:grid;
+  grid-template-columns: repeat(6,1fr);
+  gap:5px;
+  margin:20px;
+}
+
+.slot { background:green; color:white; padding:10px; cursor:pointer; }
+.ocupado { background:red; }
+.recreo { background:gray; }
+.seleccionado { background:orange; }
+
+</style>
+</head>
+
+<body>
+
+<h2>Reserva AIP</h2>
+
+<select id="docente">
+<option value="">Selecciona docente</option>
+<option value="Juan Pérez|Comunicación">Juan Pérez - Comunicación</option>
+<option value="María López|Matemática">María López - Matemática</option>
+</select>
+
+<br><br>
+<button onclick="reservar()">Reservar</button>
+
+<div class="grid" id="tabla"></div>
+
+<script>
+
+const dias = ["Hora","Lunes","Martes","Miércoles","Jueves","Viernes"];
+
+const horas = [
+"1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00",
+"RECREO",
+"4:20-5:05","5:05-5:50","5:50-6:35"
+];
+
+let seleccionados = [];
+const tabla = document.getElementById("tabla");
+
+dias.forEach(d=>{
+  let div=document.createElement("div");
+  div.innerHTML="<b>"+d+"</b>";
+  tabla.appendChild(div);
+});
+
+horas.forEach(h=>{
+  dias.forEach((d,i)=>{
+    let div=document.createElement("div");
+
+    if(i===0){
+      div.innerText=h;
+    }else{
+      if(h==="RECREO"){
+        div.className="recreo";
+      }else{
+        div.className="slot";
+
+        div.onclick=()=>{
+          div.classList.toggle("seleccionado");
+
+          if(seleccionados.includes(div)){
+            seleccionados=seleccionados.filter(s=>s!==div);
+          }else{
+            seleccionados.push(div);
+          }
+        };
+      }
+    }
+
+    tabla.appendChild(div);
+  });
+});
+
+function reservar(){
+  const docente=document.getElementById("docente").value;
+
+  if(!docente) return alert("Selecciona docente");
+  if(seleccionados.length===0) return alert("Selecciona horario");
+
+  seleccionados.forEach(slot=>{
+    slot.classList.remove("seleccionado");
+    slot.classList.add("ocupado");
+    slot.innerText = docente.split("|")[0];
+  });
+
+  alert("Reserva realizada");
+  seleccionados=[];
+}
+
+</script>
+
+</body>
+</html>
