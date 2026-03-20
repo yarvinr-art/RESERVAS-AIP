@@ -9,15 +9,42 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
+<!-- PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
 body {
   font-family: Arial;
   text-align:center;
-  background:#f4f6f9;
+  margin:0;
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  color:white;
 }
 
-h2 {
-  color:#2c3e50;
+/* Encabezado */
+.header {
+  padding:20px;
+}
+
+.header h1 {
+  font-size:22px;
+  margin:5px;
+}
+
+.header h3 {
+  font-size:16px;
+  font-weight:normal;
+  margin:5px;
+}
+
+/* Caja principal */
+.container {
+  background:white;
+  color:black;
+  margin:20px;
+  padding:20px;
+  border-radius:15px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.3);
 }
 
 select, button {
@@ -33,11 +60,12 @@ button {
   cursor:pointer;
 }
 
+/* Tabla */
 .grid {
   display:grid;
   grid-template-columns: repeat(6,1fr);
   gap:5px;
-  margin:20px;
+  margin:20px 0;
 }
 
 .slot {
@@ -48,20 +76,12 @@ button {
   border-radius:6px;
 }
 
-.ocupado {
-  background:#e74c3c;
-}
-
-.recreo {
-  background:#95a5a6;
-}
-
-.seleccionado {
-  background:#f39c12;
-}
+.ocupado { background:#e74c3c; }
+.recreo { background:#95a5a6; }
+.seleccionado { background:#f39c12; }
 
 .footer {
-  margin-top:20px;
+  margin-top:10px;
   font-weight:bold;
 }
 </style>
@@ -69,40 +89,24 @@ button {
 
 <body>
 
-<h2>📅 Reserva Aula de Innovación</h2>
+<!-- ENCABEZADO -->
+<div class="header">
+  <h1>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h1>
+  <h3>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h3>
+</div>
+
+<!-- CONTENIDO -->
+<div class="container">
+
+<h2>📅 Reserva de Horarios</h2>
 
 <select id="docente">
 <option value="">Selecciona tutor</option>
-
-<option value="1A - ARUHUANCA CCOPA HIPOLITO">1° A - ARUHUANCA CCOPA HIPOLITO</option>
-<option value="1B - VERA PALOMINO RINA">1° B - VERA PALOMINO RINA</option>
-<option value="1C - FLORES BERROCAL MIGUEL">1° C - FLORES BERROCAL MIGUEL</option>
-<option value="1D - JUMPA CAMPUZANO SILVIA">1° D - JUMPA CAMPUZANO SILVIA</option>
-<option value="1E - LUNA GUERRA WALTER">1° E - LUNA GUERRA WALTER</option>
-
-<option value="2A - CANDIA AGUILAR MARCO">2° A - CANDIA AGUILAR MARCO</option>
-<option value="2B - CHAVEZ MALAVER CARMEN">2° B - CHAVEZ MALAVER CARMEN</option>
-<option value="2C - ABANTO LEON IRMA">2° C - ABANTO LEON IRMA</option>
-<option value="2D - HUAMAN YALICO IRMA">2° D - HUAMAN YALICO IRMA</option>
-<option value="2E - CASTILLO ROMAN MARIA">2° E - CASTILLO ROMAN MARIA</option>
-
-<option value="3A - TARRILLO TEJADA FAUSTO">3° A - TARRILLO TEJADA FAUSTO</option>
-<option value="3B - WONG DELGADO NIDIA">3° B - WONG DELGADO NIDIA</option>
-<option value="3C - MAURICIO PERALES LUCIO">3° C - MAURICIO PERALES LUCIO</option>
-<option value="3D - GAMERO AGUILAR CESAR">3° D - GAMERO AGUILAR CESAR</option>
-<option value="3E - DE LA CRUZ MARIA">3° E - DE LA CRUZ MARIA</option>
-
-<option value="4A - RUA CARDENAS LISSET">4° A - RUA CARDENAS LISSET</option>
-<option value="4B - MALAVER DIONICIO ERIKA">4° B - MALAVER DIONICIO ERIKA</option>
-<option value="4C - CAMONES PULIDO LEDGARDO">4° C - CAMONES PULIDO LEDGARDO</option>
-<option value="4D - MARTINEZ DURAND ZOILA">4° D - MARTINEZ DURAND ZOILA</option>
-<option value="4E - CAMONES PULIDO LEDGARDO">4° E - CAMONES PULIDO LEDGARDO</option>
-
-<option value="5A - AZURIN SANTE ELVIS">5° A - AZURIN SANTE ELVIS</option>
-<option value="5B - LINDO CASTRO JAVIER">5° B - LINDO CASTRO JAVIER</option>
-<option value="5C - VERA INGA MANUEL">5° C - VERA INGA MANUEL</option>
-<option value="5D - CONTRATO EPT">5° D - CONTRATO EPT</option>
-
+<option value="1° A - ARUHUANCA CCOPA HIPOLITO">1° A - ARUHUANCA</option>
+<option value="2° A - CANDIA AGUILAR MARCO">2° A - CANDIA</option>
+<option value="3° A - TARRILLO TEJADA FAUSTO">3° A - TARRILLO</option>
+<option value="4° A - RUA CARDENAS LISSET">4° A - RUA</option>
+<option value="5° A - AZURIN SANTE ELVIS">5° A - AZURIN</option>
 </select>
 
 <br>
@@ -110,8 +114,8 @@ button {
 
 <div class="grid" id="tabla"></div>
 
-<div class="footer">
-PIP: YARVIN RS
+<div class="footer">PIP: YARVIN RS</div>
+
 </div>
 
 <script>
@@ -187,13 +191,26 @@ function reservar(){
   if(!docente) return alert("Selecciona tutor");
   if(seleccionados.length===0) return alert("Selecciona horario");
 
+  const { jsPDF } = window.jspdf;
+
   seleccionados.forEach(slot=>{
     const id = slot.dataset.id;
+    const fecha = new Date().toLocaleString();
 
     db.ref("reservas/"+id).set({
       nombre: docente,
-      fecha: new Date().toLocaleString()
+      fecha: fecha
     });
+
+    const doc = new jsPDF();
+
+    doc.text("BOLETA DE INGRESO AIP", 20, 20);
+    doc.text("Tutor: " + docente, 20, 40);
+    doc.text("Horario: " + id, 20, 50);
+    doc.text("Fecha: " + fecha, 20, 60);
+    doc.text("PIP: YARVIN RS", 20, 80);
+
+    doc.save("boleta_AIP.pdf");
   });
 
   alert("Reserva confirmada");
