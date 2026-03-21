@@ -19,7 +19,8 @@ body {
 }
 
 .header img {
-  width:90px;
+  width:100px;
+  margin-top:10px;
 }
 
 .container {
@@ -30,26 +31,36 @@ body {
   border-radius:15px;
 }
 
-select, button {
-  width:90%;
-  padding:10px;
-  margin:8px;
-}
-
+/* RESPONSIVE */
 .grid-container {
   overflow-x:auto;
 }
 
 .grid {
   display:grid;
-  grid-template-columns: repeat(6,110px);
+  grid-template-columns: repeat(6,120px);
   gap:5px;
 }
 
-.slot { background:green; color:white; padding:10px; border-radius:8px; }
-.ocupado { background:red; }
-.recreo { background:gray; }
-.seleccionado { background:orange; }
+.slot {
+  background:#2ecc71;
+  color:white;
+  padding:12px;
+  border-radius:8px;
+  font-size:12px;
+}
+
+.ocupado { background:#e74c3c; }
+.recreo { background:#7f8c8d; }
+.seleccionado { background:#f39c12; }
+
+select, button {
+  width:90%;
+  padding:10px;
+  margin:8px;
+  border-radius:8px;
+  border:none;
+}
 </style>
 </head>
 
@@ -58,7 +69,7 @@ select, button {
 <div class="header">
   <img src="logo.jpeg">
   <h3>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h3>
-  <h4>AULA DE INNOVACIÓN PEDAGÓGICA</h4>
+  <h4>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h4>
 </div>
 
 <div class="container">
@@ -67,6 +78,9 @@ select, button {
 <option value="">Selecciona tutor</option>
 <option>1° A - ARUHUANCA</option>
 <option>2° A - CANDIA</option>
+<option>3° A - TARRILLO</option>
+<option>4° A - RUA</option>
+<option>5° A - AZURIN</option>
 </select>
 
 <button onclick="reservar()">Reservar</button>
@@ -89,18 +103,26 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// 🔥 HORAS ORIGINALES (NO CAMBIAR)
 const dias = ["Hora","Lunes","Martes","Miércoles","Jueves","Viernes"];
-const horas = ["1:00-1:45","1:45-2:30","RECREO","4:20-5:05"];
+
+const horas = [
+"1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00",
+"RECREO",
+"4:20-5:05","5:05-5:50","5:50-6:35"
+];
 
 let seleccionados = [];
 const tabla = document.getElementById("tabla");
 
+// ENCABEZADO
 dias.forEach(d=>{
   let div=document.createElement("div");
   div.innerHTML="<b>"+d+"</b>";
   tabla.appendChild(div);
 });
 
+// CUERPO
 horas.forEach(h=>{
   dias.forEach((d,i)=>{
     let div=document.createElement("div");
@@ -108,12 +130,15 @@ horas.forEach(h=>{
     if(i===0){
       div.innerText=h;
     }else{
+
       if(h==="RECREO"){
         div.className="recreo";
       }else{
+
         div.className="slot";
         div.dataset.id = d + "-" + h;
 
+        // 🔥 CARGAR RESERVAS EXISTENTES
         db.ref("reservas/"+div.dataset.id).on("value", snap=>{
           if(snap.exists()){
             div.classList.add("ocupado");
@@ -132,6 +157,7 @@ horas.forEach(h=>{
             seleccionados.push(div);
           }
         };
+
       }
     }
 
@@ -139,6 +165,7 @@ horas.forEach(h=>{
   });
 });
 
+// RESERVAR
 function reservar(){
 
   const docente = document.getElementById("docente").value;
