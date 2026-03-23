@@ -4,106 +4,128 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>AIP Reservas</title>
+<title>Panel AIP</title>
 
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-<!-- PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<!-- QR -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
   font-family:Arial;
   margin:0;
-  background: linear-gradient(135deg,#1e3c72,#2a5298);
+  background:#1e3c72;
   color:white;
   text-align:center;
-}
-
-.header img{
-  width:100px;
-  margin-top:10px;
 }
 
 .container{
   background:white;
   color:black;
   margin:10px;
-  padding:15px;
-  border-radius:15px;
+  padding:10px;
+  border-radius:10px;
 }
 
-select, button{
-  width:90%;
-  padding:10px;
-  margin:8px;
-  border-radius:8px;
+input, select, button{
+  padding:8px;
+  margin:5px;
+  border-radius:6px;
   border:none;
 }
 
-.grid-container{
-  overflow-x:auto;
+table{
+  width:100%;
+  border-collapse:collapse;
 }
 
-.grid{
-  display:grid;
-  grid-template-columns: repeat(6,120px);
-  gap:5px;
+th,td{
+  padding:8px;
+  border:1px solid #ccc;
 }
 
-.slot{
-  background:#2ecc71;
-  color:white;
-  padding:12px;
-  border-radius:8px;
-  font-size:12px;
-}
-
-.ocupado{ background:#e74c3c; }
-.recreo{ background:#7f8c8d; }
-.seleccionado{ background:#f39c12; }
+.asistio{ background:#2ecc71; color:white; }
+.no{ background:#e74c3c; color:white; }
 </style>
 </head>
 
 <body>
 
-<div class="header">
-  <img src="logo.jpeg">
-  <h3>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h3>
-  <h4>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h4>
-</div>
+<h2>📊 Panel de Asistencia AIP</h2>
 
 <div class="container">
 
-<button onclick="activarAdmin()">Modo Admin</button>
+<input type="text" id="buscador" placeholder="Buscar docente...">
 
-<select id="docente">
-<option value="">Selecciona tutor</option>
-<option>1° A - ARUHUANCA</option>
-<option>2° A - CANDIA</option>
-<option>3° A - TARRILLO</option>
-<option>4° A - RUA</option>
-<option>5° A - AZURIN</option>
+<select id="filtroDia">
+<option value="">Todos</option>
+<option>Lunes</option>
+<option>Martes</option>
+<option>Miércoles</option>
+<option>Jueves</option>
+<option>Viernes</option>
 </select>
 
-<button onclick="reservar()">Reservar</button>
+<br>
 
-<div class="grid-container">
-<div class="grid" id="tabla"></div>
+<button onclick="exportarExcel()">📥 Excel</button>
+<button onclick="verRanking()">🏆 Ranking Docentes</button>
+<button onclick="verRankingGrados()">🏫 Ranking Grados</button>
+<button onclick="verPorcentajes()">📊 % Asistencia</button>
+<button onclick="generarInforme()">📄 Informe</button>
+
+<table>
+<thead>
+<tr>
+<th>Horario</th>
+<th>Docente</th>
+<th>Estado</th>
+<th>Hora ingreso</th>
+</tr>
+</thead>
+
+<tbody id="tabla"></tbody>
+</table>
+
+<!-- RANKING DOCENTE -->
+<div id="ranking" style="display:none;">
+<h3>🏆 Ranking Docentes</h3>
+<table>
+<tbody id="tablaRanking"></tbody>
+</table>
+</div>
+
+<!-- GRAFICO -->
+<div id="rankingGrados" style="display:none;">
+<h3>🏫 Ranking por Grado</h3>
+<canvas id="grafico"></canvas>
+</div>
+
+<!-- PORCENTAJES -->
+<div id="porcentajes" style="display:none;">
+<h3>📊 Porcentajes</h3>
+
+<h4>Docentes</h4>
+<table><tbody id="tablaDocente"></tbody></table>
+
+<h4>Grados</h4>
+<table><tbody id="tablaGrado"></tbody></table>
+
 </div>
 
 </div>
 
 <script>
 
+// 🔐 CLAVE
+const clave = prompt("Ingrese clave");
+if(clave !== "1234"){
+  document.body.innerHTML="";
+}
+
+// 🔥 FIREBASE
 const firebaseConfig = {
   apiKey: "A...",
   authDomain: "ingreso-al-aip---2026.firebaseapp.com",
@@ -114,181 +136,167 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let admin = false;
+let datos = [];
 
-function activarAdmin(){
-  const clave = prompt("Clave admin:");
-  if(clave === "1234"){
-    admin = true;
-    alert("Modo admin activado");
-  }
-}
-
-const dias = ["Hora","Lunes","Martes","Miércoles","Jueves","Viernes"];
-
-const horas = [
-"1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00",
-"RECREO",
-"4:20-5:05","5:05-5:50","5:50-6:35"
-];
-
-let seleccionados = [];
 const tabla = document.getElementById("tabla");
 
-dias.forEach(d=>{
-  let div=document.createElement("div");
-  div.innerHTML="<b>"+d+"</b>";
-  tabla.appendChild(div);
-});
+// 🔄 TIEMPO REAL
+db.ref("reservas").on("value", snapshot=>{
 
-horas.forEach(h=>{
-  dias.forEach((d,i)=>{
-    let div=document.createElement("div");
+  datos = [];
 
-    if(i===0){
-      div.innerText=h;
-    }else{
-
-      if(h==="RECREO"){
-        div.className="recreo";
-      }else{
-
-        div.className="slot";
-        div.dataset.id = d + "-" + h;
-
-        db.ref("reservas/"+div.dataset.id).on("value", snap=>{
-          if(snap.exists()){
-            div.classList.add("ocupado");
-            div.innerText = snap.val().nombre;
-          }
-        });
-
-        div.onclick=()=>{
-          if(div.classList.contains("ocupado")) return;
-
-          div.classList.toggle("seleccionado");
-
-          if(seleccionados.includes(div)){
-            seleccionados=seleccionados.filter(s=>s!==div);
-          }else{
-            seleccionados.push(div);
-          }
-        };
-
-        // ELIMINAR (ADMIN)
-        div.oncontextmenu = (e)=>{
-          e.preventDefault();
-          if(admin){
-            if(confirm("¿Eliminar reserva?")){
-              db.ref("reservas/"+div.dataset.id).remove();
-            }
-          }
-        };
-
-      }
-    }
-
-    tabla.appendChild(div);
-  });
-});
-
-function reservar(){
-
-  const docente = document.getElementById("docente").value;
-
-  if(!docente) return alert("Selecciona tutor");
-  if(seleccionados.length===0) return alert("Selecciona horario");
-
-  const { jsPDF } = window.jspdf;
-
-  db.ref("reservas").once("value", snapshot=>{
-
-    let yaReservo=false;
-
-    snapshot.forEach(child=>{
-      if(child.val().nombre === docente){
-        yaReservo=true;
-      }
+  snapshot.forEach(child=>{
+    datos.push({
+      horario: child.key,
+      nombre: child.val().nombre,
+      asistio: child.val().asistio || false,
+      hora: child.val().horaIngreso || "-"
     });
-
-    if(yaReservo){
-      alert("Este tutor ya reservó");
-      return;
-    }
-
-    seleccionados.forEach(slot=>{
-
-      const id = slot.dataset.id;
-
-      db.ref("reservas/"+id).once("value", snap=>{
-        if(snap.exists()){
-          alert("Horario ocupado");
-          return;
-        }
-
-        const fecha = new Date().toLocaleString();
-
-        db.ref("reservas/"+id).set({
-          nombre: docente,
-          fecha: fecha
-        });
-
-        const doc = new jsPDF();
-
-        doc.text("BOLETA AIP",20,20);
-        doc.text("Tutor: "+docente,20,40);
-        doc.text("Horario: "+id,20,50);
-
-        const url = window.location.origin + window.location.pathname + "#" + id;
-
-        const qrDiv = document.createElement("div");
-
-        new QRCode(qrDiv,{
-          text:url,
-          width:100,
-          height:100
-        });
-
-        setTimeout(()=>{
-          const img = qrDiv.querySelector("img").src;
-          doc.addImage(img,"PNG",140,20,50,50);
-          doc.save("boleta.pdf");
-        },500);
-
-      });
-
-    });
-
-    alert("Reserva confirmada");
-    seleccionados=[];
-
   });
 
+  mostrar();
+});
+
+// 🔍 MOSTRAR
+function mostrar(){
+
+  const texto = document.getElementById("buscador").value.toLowerCase();
+  const dia = document.getElementById("filtroDia").value;
+
+  tabla.innerHTML="";
+
+  datos.forEach(d=>{
+
+    if(texto && !d.nombre.toLowerCase().includes(texto)) return;
+    if(dia && !d.horario.includes(dia)) return;
+
+    let fila = document.createElement("tr");
+
+    let estado = d.asistio ? "🟢 Asistió" : "🔴 No asistió";
+    let clase = d.asistio ? "asistio" : "no";
+
+    fila.innerHTML = `
+      <td>${d.horario}</td>
+      <td>${d.nombre}</td>
+      <td class="${clase}">${estado}</td>
+      <td>${d.hora}</td>
+    `;
+
+    tabla.appendChild(fila);
+
+  });
 }
 
-// AUTO ASISTENCIA QR
-window.onload = function(){
+document.getElementById("buscador").onkeyup = mostrar;
+document.getElementById("filtroDia").onchange = mostrar;
 
-  const hash = window.location.hash;
+// 📥 EXCEL
+function exportarExcel(){
+  let contenido="Horario,Docente,Estado,Hora\n";
 
-  if(hash){
+  datos.forEach(d=>{
+    let estado = d.asistio ? "Asistió" : "No asistió";
+    contenido+=`${d.horario},${d.nombre},${estado},${d.hora}\n`;
+  });
 
-    const id = hash.replace("#","");
+  const blob = new Blob([contenido]);
+  const url = URL.createObjectURL(blob);
 
-    db.ref("reservas/"+id).update({
-      asistio:true,
-      horaIngreso:new Date().toLocaleString()
-    });
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="reporte.csv";
+  a.click();
+}
 
-    alert("Asistencia registrada");
+// 🏆 RANKING DOCENTE
+function verRanking(){
 
+  let conteo={};
+
+  datos.forEach(d=>{
+    if(d.asistio){
+      if(!conteo[d.nombre]) conteo[d.nombre]=0;
+      conteo[d.nombre]++;
+    }
+  });
+
+  let ranking=Object.entries(conteo).sort((a,b)=>b[1]-a[1]);
+
+  const tablaRanking=document.getElementById("tablaRanking");
+  tablaRanking.innerHTML="";
+
+  ranking.forEach((r,i)=>{
+    tablaRanking.innerHTML+=`<tr><td>${i+1}</td><td>${r[0]}</td><td>${r[1]}</td></tr>`;
+  });
+
+  document.getElementById("ranking").style.display="block";
+}
+
+// 🏫 GRAFICO
+function verRankingGrados(){
+
+  let conteo={};
+
+  datos.forEach(d=>{
+    if(d.asistio){
+      let g=d.nombre.split("-")[0];
+      if(!conteo[g]) conteo[g]=0;
+      conteo[g]++;
+    }
+  });
+
+  const ctx=document.getElementById("grafico");
+
+  new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:Object.keys(conteo),
+      datasets:[{data:Object.values(conteo)}]
+    }
+  });
+
+  document.getElementById("rankingGrados").style.display="block";
+}
+
+// 📊 PORCENTAJES
+function verPorcentajes(){
+
+  let total={}, asist={};
+
+  datos.forEach(d=>{
+    let doc=d.nombre;
+
+    if(!total[doc]){ total[doc]=0; asist[doc]=0; }
+
+    total[doc]++;
+    if(d.asistio) asist[doc]++;
+  });
+
+  const tablaDocente=document.getElementById("tablaDocente");
+  tablaDocente.innerHTML="";
+
+  for(let d in total){
+    let p=((asist[d]/total[d])*100).toFixed(1);
+    tablaDocente.innerHTML+=`<tr><td>${d}</td><td>${p}%</td></tr>`;
   }
 
-};
+  document.getElementById("porcentajes").style.display="block";
+}
 
-// SERVICE WORKER
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js");
+// 📄 INFORME
+function generarInforme(){
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  let total = datos.length;
+  let asistieron = datos.filter(d=>d.asistio).length;
+
+  doc.text("INFORME AIP",20,20);
+  doc.text("Total: "+total,20,30);
+  doc.text("Asistieron: "+asistieron,20,40);
+
+  doc.save("informe.pdf");
 }
 
 </script>
