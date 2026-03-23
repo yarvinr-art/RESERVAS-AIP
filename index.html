@@ -3,27 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reserva AIP</title>
 
+<title>AIP Reservas</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<!-- PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+<!-- QR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <style>
-body {
-  font-family: Arial;
+body{
+  font-family:Arial;
   margin:0;
-  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  background: linear-gradient(135deg,#1e3c72,#2a5298);
   color:white;
   text-align:center;
 }
 
-.header img {
+.header img{
   width:100px;
   margin-top:10px;
 }
 
-.container {
+.container{
   background:white;
   color:black;
   margin:10px;
@@ -31,18 +41,25 @@ body {
   border-radius:15px;
 }
 
-/* RESPONSIVE */
-.grid-container {
+select, button{
+  width:90%;
+  padding:10px;
+  margin:8px;
+  border-radius:8px;
+  border:none;
+}
+
+.grid-container{
   overflow-x:auto;
 }
 
-.grid {
+.grid{
   display:grid;
   grid-template-columns: repeat(6,120px);
   gap:5px;
 }
 
-.slot {
+.slot{
   background:#2ecc71;
   color:white;
   padding:12px;
@@ -50,17 +67,9 @@ body {
   font-size:12px;
 }
 
-.ocupado { background:#e74c3c; }
-.recreo { background:#7f8c8d; }
-.seleccionado { background:#f39c12; }
-
-select, button {
-  width:90%;
-  padding:10px;
-  margin:8px;
-  border-radius:8px;
-  border:none;
-}
+.ocupado{ background:#e74c3c; }
+.recreo{ background:#7f8c8d; }
+.seleccionado{ background:#f39c12; }
 </style>
 </head>
 
@@ -73,42 +82,22 @@ select, button {
 </div>
 
 <div class="container">
+
+<button onclick="activarAdmin()">Modo Admin</button>
+
 <select id="docente">
 <option value="">Selecciona tutor</option>
-<option>1° A - ARUHUANCA CCOPA HIPOLITO</option>
-<option>1° B - VERA PALOMINO RINA ESTHER</option>
-<option>1° C - FLORES BERROCAL MIGUEL ANGEL</option>
-<option>1° D - JUMPA CAMPUZANO SILVIA JACKELINE</option>
-<option>1° E - LUNA GUERRA WALTER RAFAEL</option>
-
-<option>2° A - CANDIA AGUILAR MARCO ANTONIO</option>
-<option>2° B - CHAVEZ MALAVER CARMEN ELIZABETH</option>
-<option>2° C - ABANTO LEON IRMA</option>
-<option>2° D - HUAMAN YALICO IRMA FAUSTINA</option>
-<option>2° E - CASTILLO ROMAN MARIA LIZZI</option>
-
-<option>3° A - TARRILLO TEJADA FAUSTO</option>
-<option>3° B - WONG DELGADO NIDIA ANGELICA</option>
-<option>3° C - MAURICIO PERALES LUCIO</option>
-<option>3° D - GAMERO AGUILAR CESAR AUGUSTO</option>
-<option>3° E - DE LA CRUZ MARIA</option>
-
-<option>4° A - RUA CARDENAS LISSET ROSALIA</option>
-<option>4° B - MALAVER DIONICIO ERIKA VERONICA</option>
-<option>4° C - CAMONES PULIDO LEDGARDO</option>
-<option>4° D - MARTINEZ DURAND ZOILA LILIANA</option>
-<option>4° E - CAMONES PULIDO LEDGARDO</option>
-
-<option>5° A - AZURIN SANTE ELVIS</option>
-<option>5° B - LINDO CASTRO JAVIER ALEXIS</option>
-<option>5° C - VERA INGA MANUEL</option>
-<option>5° D - CONTRATO EPT</option>
+<option>1° A - ARUHUANCA</option>
+<option>2° A - CANDIA</option>
+<option>3° A - TARRILLO</option>
+<option>4° A - RUA</option>
+<option>5° A - AZURIN</option>
 </select>
 
 <button onclick="reservar()">Reservar</button>
 
 <div class="grid-container">
-  <div class="grid" id="tabla"></div>
+<div class="grid" id="tabla"></div>
 </div>
 
 </div>
@@ -125,7 +114,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 🔥 HORAS ORIGINALES (NO CAMBIAR)
+let admin = false;
+
+function activarAdmin(){
+  const clave = prompt("Clave admin:");
+  if(clave === "1234"){
+    admin = true;
+    alert("Modo admin activado");
+  }
+}
+
 const dias = ["Hora","Lunes","Martes","Miércoles","Jueves","Viernes"];
 
 const horas = [
@@ -137,14 +135,12 @@ const horas = [
 let seleccionados = [];
 const tabla = document.getElementById("tabla");
 
-// ENCABEZADO
 dias.forEach(d=>{
   let div=document.createElement("div");
   div.innerHTML="<b>"+d+"</b>";
   tabla.appendChild(div);
 });
 
-// CUERPO
 horas.forEach(h=>{
   dias.forEach((d,i)=>{
     let div=document.createElement("div");
@@ -160,7 +156,6 @@ horas.forEach(h=>{
         div.className="slot";
         div.dataset.id = d + "-" + h;
 
-        // 🔥 CARGAR RESERVAS EXISTENTES
         db.ref("reservas/"+div.dataset.id).on("value", snap=>{
           if(snap.exists()){
             div.classList.add("ocupado");
@@ -180,6 +175,16 @@ horas.forEach(h=>{
           }
         };
 
+        // ELIMINAR (ADMIN)
+        div.oncontextmenu = (e)=>{
+          e.preventDefault();
+          if(admin){
+            if(confirm("¿Eliminar reserva?")){
+              db.ref("reservas/"+div.dataset.id).remove();
+            }
+          }
+        };
+
       }
     }
 
@@ -187,7 +192,6 @@ horas.forEach(h=>{
   });
 });
 
-// RESERVAR
 function reservar(){
 
   const docente = document.getElementById("docente").value;
@@ -197,27 +201,28 @@ function reservar(){
 
   const { jsPDF } = window.jspdf;
 
-  db.ref("reservas").once("value", snapshot => {
+  db.ref("reservas").once("value", snapshot=>{
 
-    let yaReservo = false;
+    let yaReservo=false;
 
     snapshot.forEach(child=>{
       if(child.val().nombre === docente){
-        yaReservo = true;
+        yaReservo=true;
       }
     });
 
     if(yaReservo){
-      alert("Este tutor ya realizó una reserva");
+      alert("Este tutor ya reservó");
       return;
     }
 
     seleccionados.forEach(slot=>{
+
       const id = slot.dataset.id;
 
       db.ref("reservas/"+id).once("value", snap=>{
         if(snap.exists()){
-          alert("Ese horario ya fue tomado");
+          alert("Horario ocupado");
           return;
         }
 
@@ -230,13 +235,26 @@ function reservar(){
 
         const doc = new jsPDF();
 
-        doc.text("BOLETA DE INGRESO AIP", 20, 20);
-        doc.text("Tutor: " + docente, 20, 40);
-        doc.text("Horario: " + id, 20, 50);
-        doc.text("Fecha: " + fecha, 20, 60);
-        doc.text("PIP: YARVIN RS", 20, 80);
+        doc.text("BOLETA AIP",20,20);
+        doc.text("Tutor: "+docente,20,40);
+        doc.text("Horario: "+id,20,50);
 
-        doc.save("boleta_AIP.pdf");
+        const url = window.location.origin + window.location.pathname + "#" + id;
+
+        const qrDiv = document.createElement("div");
+
+        new QRCode(qrDiv,{
+          text:url,
+          width:100,
+          height:100
+        });
+
+        setTimeout(()=>{
+          const img = qrDiv.querySelector("img").src;
+          doc.addImage(img,"PNG",140,20,50,50);
+          doc.save("boleta.pdf");
+        },500);
+
       });
 
     });
@@ -246,6 +264,31 @@ function reservar(){
 
   });
 
+}
+
+// AUTO ASISTENCIA QR
+window.onload = function(){
+
+  const hash = window.location.hash;
+
+  if(hash){
+
+    const id = hash.replace("#","");
+
+    db.ref("reservas/"+id).update({
+      asistio:true,
+      horaIngreso:new Date().toLocaleString()
+    });
+
+    alert("Asistencia registrada");
+
+  }
+
+};
+
+// SERVICE WORKER
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
 }
 
 </script>
