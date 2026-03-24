@@ -3,39 +3,138 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AIP Reservas</title>
+<title>AIP Reservas PRO</title>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+
+<!-- Animaciones -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 
 <style>
-body{font-family:Arial;margin:0;background:#1e3c72;color:white;text-align:center}
-.container{background:white;color:black;margin:10px;padding:10px;border-radius:10px}
-select,button{padding:10px;margin:5px;border-radius:6px;border:none}
 
-table{width:100%;border-collapse:collapse}
-th{background:#2c3e50;color:white;padding:8px}
-td{border:1px solid #ccc;padding:8px;text-align:center;font-size:12px}
+body{
+  font-family:'Poppins',sans-serif;
+  margin:0;
+  background:linear-gradient(135deg,#1e3c72,#2a5298);
+  color:white;
+  text-align:center;
+}
 
-.slot{cursor:pointer}
-.slot.seleccionado{background:#2ecc71;color:white}
-.slot.ocupado{background:#7f8c8d;color:white;cursor:not-allowed}
+h2{
+  margin-top:10px;
+}
 
-.admin{display:none}
+/* CONTENEDOR */
+.container{
+  background:white;
+  color:black;
+  margin:10px;
+  padding:15px;
+  border-radius:15px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* SELECT */
+select{
+  padding:10px;
+  margin:5px;
+  border-radius:8px;
+  border:none;
+  width:90%;
+  max-width:300px;
+}
+
+/* GRID */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:10px;
+  margin-top:10px;
+}
+
+/* TARJETAS HORARIO */
+.card{
+  background:#3498db;
+  color:white;
+  padding:10px;
+  border-radius:12px;
+  cursor:pointer;
+  transition:0.3s;
+  box-shadow:0 4px 10px rgba(0,0,0,0.2);
+}
+
+.card:hover{
+  transform:scale(1.05);
+}
+
+.card.seleccionado{
+  background:#2ecc71;
+}
+
+.card.ocupado{
+  background:#7f8c8d;
+  cursor:not-allowed;
+}
+
+/* RECREO */
+.recreo{
+  background:#f39c12;
+  font-weight:bold;
+  border-radius:12px;
+  padding:10px;
+}
+
+/* BOTONES */
+button{
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  margin-top:10px;
+  background:#27ae60;
+  color:white;
+  font-size:16px;
+}
+
+/* ADMIN */
+.admin{
+  display:none;
+}
+
+/* TABLA ADMIN */
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+td,th{
+  border:1px solid #ccc;
+  padding:6px;
+  font-size:12px;
+}
+
 </style>
 </head>
 
 <body>
 
+<!-- BOTÓN SECRETO -->
+<div onclick="activarAdmin()" style="position:fixed;top:0;left:0;width:40px;height:40px;"></div>
+
 <h2>📚 AULA DE INNOVACIÓN PEDAGÓGICA</h2>
 
 <div class="container">
 
+<select id="semana">
+<option>Semana 23-27 Marzo</option>
+<option>Semana 30 Marzo - 2 Abril</option>
+</select>
+
+<br>
+
 <select id="docente">
 <option value="">Seleccione docente</option>
-
 <option>REYNA TUESTA LUIS ENRIQUE</option>
 <option>CRUZ YCHO, BEATRIZ</option>
 <option>CARHUANCHO AVILES JANETH</option>
@@ -43,204 +142,177 @@ td{border:1px solid #ccc;padding:8px;text-align:center;font-size:12px}
 <option>CAMONES PULIDO, LEDGARDO</option>
 <option>PADILLA SANCHEZ, LORD ENRIQUE</option>
 <option>APAZA ROBLES ROBERTO JORGE</option>
-<option>JÁUREGUI SÁNCHEZ MANUEL</option>
-<option>VARILLAS ALANÍS, GENOVEVA</option>
-<option>LINDO CASTRO, JAVIER</option>
-<option>MAURICIO PERALES, BERNABE LUCIO</option>
-<option>VERA INGA MANUEL SALOMÓN</option>
-<option>MALAVER DIONICIO, ERIKA VERONICA</option>
-<option>CASTILLO ROMÁN MARÍA LIZZI</option>
-<option>RUA CARDENAS LISSET ROSALÍA</option>
-<option>TARRILLO TEJADA, FAUSTO</option>
-<option>ABANTO LEÓN IRMA</option>
-<option>HUAMAN YALICO, IRMA FAUSTINA</option>
-<option>MARTINEZ DURAND, ZOILA LILIANA</option>
-<option>JUMPA CAMPUZANO, SILVIA JACKELINE</option>
-<option>CHAVEZ MALAVER, CARMEN</option>
-<option>LLIUYALL CONDOR, ROSARIO</option>
-<option>WONG DELGADO, NIDIA ANGÉLICA</option>
-<option>VERA PALOMINO, RINA ESTHER</option>
-<option>CRISTOBAL, PATTY BELL</option>
-<option>GAMERO AGUILAR, CÉSAR AUGUSTO</option>
-<option>FLORES BERROCAL, MIGUEL ANGEL</option>
-<option>LUNA GUERRA, WALTER RAFAEL</option>
-<option>AZURIN SANTE, ELVIS</option>
-<option>CANDIA AGUILAR, MARCO ANTONIO</option>
-<option>MARTINEZ, CARLOS</option>
-<option>ARUHUANCA CCOPA, HIPÓLITO</option>
-<option>MARÍA DE LA CRUZ</option>
-
 </select>
 
-<div id="horarios"></div>
+<div class="grid" id="horarios"></div>
 
 <button onclick="reservar()">Reservar</button>
 
 </div>
 
-<!-- PANEL ADMIN -->
+<!-- ADMIN -->
 <div class="container admin" id="adminPanel">
+
 <h3>🔐 PANEL ADMIN</h3>
 
-<button onclick="exportarExcel()">📥 Excel</button>
-<button onclick="verRanking()">🏆 Ranking</button>
-<button onclick="verPorcentajes()">📊 %</button>
-<button onclick="generarInforme()">📄 Informe</button>
+<button onclick="exportarExcel()">Exportar Excel</button>
 
 <table>
 <thead>
 <tr>
+<th>Semana</th>
 <th>Horario</th>
 <th>Docente</th>
-<th>Estado</th>
-<th>Acción</th>
 </tr>
 </thead>
 <tbody id="tabla"></tbody>
 </table>
 
-<div id="extra"></div>
-
 </div>
 
 <script>
 
-// 🔥 FIREBASE
-const firebaseConfig = {
-  apiKey: "A...",
-  authDomain: "ingreso-al-aip---2026.firebaseapp.com",
-  databaseURL: "https://ingreso-al-aip---2026-default-rtdb.firebaseio.com",
-  projectId: "ingreso-al-aip---2026"
+// FIREBASE
+const firebaseConfig={
+apiKey:"A...",
+authDomain:"ingreso-al-aip---2026.firebaseapp.com",
+databaseURL:"https://ingreso-al-aip---2026-default-rtdb.firebaseio.com",
+projectId:"ingreso-al-aip---2026"
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db=firebase.database();
 
 // HORARIOS
 const dias=["Lunes","Martes","Miércoles","Jueves","Viernes"];
 const horas=[
 "1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00",
+"RECREO",
 "4:20-5:05","5:05-5:50","5:50-6:35"
 ];
 
 const cont=document.getElementById("horarios");
 let seleccion=null;
 
-// TABLA HORARIO
-const tabla=document.createElement("table");
-
-let header="<tr><th>Hora</th>";
-dias.forEach(d=> header+=`<th>${d}</th>`);
-header+="</tr>";
-tabla.innerHTML=header;
-
+// CREAR TARJETAS
 horas.forEach(h=>{
-  let fila=`<tr><td><b>${h}</b></td>`;
+
+  if(h==="RECREO"){
+    let div=document.createElement("div");
+    div.className="recreo";
+    div.innerText="☕ RECREO (4:00-4:20)";
+    cont.appendChild(div);
+    return;
+  }
+
   dias.forEach(d=>{
     let id=d+" "+h;
-    fila+=`<td class="slot" data-id="${id}">Disponible</td>`;
+
+    let card=document.createElement("div");
+    card.className="card";
+    card.dataset.id=id;
+    card.innerHTML=`<b>${d}</b><br>${h}`;
+
+    card.onclick=()=>{
+      if(card.classList.contains("ocupado")) return;
+
+      document.querySelectorAll(".card").forEach(c=>c.classList.remove("seleccionado"));
+      card.classList.add("seleccionado");
+      seleccion=id;
+    };
+
+    cont.appendChild(card);
   });
-  fila+="</tr>";
-  tabla.innerHTML+=fila;
-});
 
-cont.appendChild(tabla);
-
-// EVENTO
-document.querySelectorAll(".slot").forEach(celda=>{
-  celda.onclick=()=>{
-    if(celda.classList.contains("ocupado")) return;
-    document.querySelectorAll(".slot").forEach(c=>c.classList.remove("seleccionado"));
-    celda.classList.add("seleccionado");
-    seleccion=celda.dataset.id;
-  };
 });
 
 // RESERVAR
 function reservar(){
+
   const docente=document.getElementById("docente").value;
+  const semana=document.getElementById("semana").value;
+
   if(!docente) return alert("Seleccione docente");
   if(!seleccion) return alert("Seleccione horario");
 
-  db.ref("reservas/"+seleccion).once("value",snap=>{
+  let ruta="reservas/"+semana+"/"+seleccion;
+
+  db.ref(ruta).once("value",snap=>{
     if(snap.exists()) return alert("Horario ocupado");
 
-    const fecha=new Date().toLocaleString();
+    db.ref(ruta).set({nombre:docente});
 
-    db.ref("reservas/"+seleccion).set({
-      nombre:docente,
-      asistio:false,
-      fecha:fecha
+    alert("Reserva guardada");
+    cargarDatos();
+  });
+}
+
+// CARGAR
+function cargarDatos(){
+
+  const semana=document.getElementById("semana").value;
+
+  document.querySelectorAll(".card").forEach(c=>{
+    c.classList.remove("ocupado");
+    c.innerHTML=c.innerHTML.split("<br>")[0]+"<br>"+c.dataset.id.split(" ")[1];
+  });
+
+  db.ref("reservas/"+semana).once("value",snap=>{
+    snap.forEach(child=>{
+      let d=child.val();
+
+      document.querySelectorAll(".card").forEach(c=>{
+        if(c.dataset.id===child.key){
+          c.classList.add("ocupado");
+          c.innerHTML="<b>"+d.nombre+"</b>";
+        }
+      });
     });
-
-    generarQR(docente,seleccion,fecha);
-
-    alert("Reserva exitosa");
   });
+
+  cargarAdmin();
 }
 
-// QR
-function generarQR(nombre,horario,fecha){
-  const { jsPDF } = window.jspdf;
-
-  QRCode.toDataURL(nombre+"|"+horario+"|"+fecha,function(err,url){
-    const doc=new jsPDF();
-    doc.text("BOLETA AIP",20,20);
-    doc.text("Docente: "+nombre,20,40);
-    doc.text("Horario: "+horario,20,50);
-    doc.text("Fecha: "+fecha,20,60);
-    doc.addImage(url,"PNG",20,70,50,50);
-    doc.text("PIP: YARVIN RS",20,130);
-    doc.save("boleta.pdf");
-  });
+// ADMIN
+function activarAdmin(){
+  const clave=prompt("Clave:");
+  if(clave==="yarvin2026"){
+    document.getElementById("adminPanel").style.display="block";
+    cargarAdmin();
+  }
 }
 
-// ACTUALIZAR
-db.ref("reservas").on("value",snap=>{
+// TABLA ADMIN
+function cargarAdmin(){
+
   const tabla=document.getElementById("tabla");
   tabla.innerHTML="";
 
-  document.querySelectorAll(".slot").forEach(s=>{
-    s.classList.remove("ocupado");
-    s.textContent="Disponible";
-  });
-
-  snap.forEach(child=>{
-    let d=child.val();
-
-    document.querySelectorAll(".slot").forEach(s=>{
-      if(s.dataset.id===child.key){
-        s.classList.add("ocupado");
-        s.innerHTML="<b>"+d.nombre+"</b>";
-      }
+  db.ref("reservas").once("value",snap=>{
+    snap.forEach(sem=>{
+      sem.forEach(h=>{
+        tabla.innerHTML+=`
+        <tr>
+        <td>${sem.key}</td>
+        <td>${h.key}</td>
+        <td>${h.val().nombre}</td>
+        </tr>
+        `;
+      });
     });
-
-    tabla.innerHTML+=`
-    <tr>
-    <td>${child.key}</td>
-    <td>${d.nombre}</td>
-    <td>${d.asistio?"🟢":"🔴"}</td>
-    <td>
-    <button onclick="asistio('${child.key}')">✔</button>
-    <button onclick="eliminar('${child.key}')">🗑</button>
-    </td>
-    </tr>
-    `;
   });
-});
-
-// ADMIN FUNCIONES
-function asistio(h){ db.ref("reservas/"+h+"/asistio").set(true); }
-function eliminar(h){ db.ref("reservas/"+h).remove(); }
+}
 
 // EXCEL
 function exportarExcel(){
   db.ref("reservas").once("value",snap=>{
-    let csv="Horario,Docente,Asistencia\n";
-    snap.forEach(c=>{
-      let d=c.val();
-      csv+=`${c.key},${d.nombre},${d.asistio}\n`;
+    let csv="Semana,Horario,Docente\n";
+    snap.forEach(sem=>{
+      sem.forEach(h=>{
+        csv+=`${sem.key},${h.key},${h.val().nombre}\n`;
+      });
     });
+
     const blob=new Blob([csv]);
     const a=document.createElement("a");
     a.href=URL.createObjectURL(blob);
@@ -249,80 +321,11 @@ function exportarExcel(){
   });
 }
 
-// RANKING
-function verRanking(){
-  db.ref("reservas").once("value",snap=>{
-    let cont={};
-    snap.forEach(c=>{
-      let d=c.val();
-      if(d.asistio){
-        if(!cont[d.nombre]) cont[d.nombre]=0;
-        cont[d.nombre]++;
-      }
-    });
+// CAMBIO SEMANA
+document.getElementById("semana").addEventListener("change",cargarDatos);
 
-    let html="<h3>Ranking</h3>";
-    Object.entries(cont).sort((a,b)=>b[1]-a[1])
-    .forEach((r,i)=> html+=`${i+1}. ${r[0]} - ${r[1]}<br>`);
-
-    document.getElementById("extra").innerHTML=html;
-  });
-}
-
-// PORCENTAJE
-function verPorcentajes(){
-  db.ref("reservas").once("value",snap=>{
-    let total={},asis={};
-
-    snap.forEach(c=>{
-      let d=c.val();
-      if(!total[d.nombre]){total[d.nombre]=0;asis[d.nombre]=0;}
-      total[d.nombre]++;
-      if(d.asistio) asis[d.nombre]++;
-    });
-
-    let html="<h3>% Asistencia</h3>";
-    for(let d in total){
-      let p=((asis[d]/total[d])*100).toFixed(1);
-      html+=`${d}: ${p}%<br>`;
-    }
-
-    document.getElementById("extra").innerHTML=html;
-  });
-}
-
-// INFORME
-function generarInforme(){
-  db.ref("reservas").once("value",snap=>{
-    const { jsPDF } = window.jspdf;
-    const doc=new jsPDF();
-
-    let total=0,asis=0;
-    snap.forEach(c=>{
-      total++;
-      if(c.val().asistio) asis++;
-    });
-
-    doc.text("INFORME AIP",20,20);
-    doc.text("Total: "+total,20,40);
-    doc.text("Asistencia: "+asis,20,50);
-    doc.save("informe.pdf");
-  });
-}
-
-// 🔐 ADMIN OCULTO
-let clave="";
-document.addEventListener("keydown",function(e){
-  clave+=e.key;
-
-  if(clave.includes("yarvin2026")){
-    document.getElementById("adminPanel").style.display="block";
-    alert("🔐 Modo administrador activado");
-    clave="";
-  }
-
-  if(clave.length>20) clave="";
-});
+// INICIO
+cargarDatos();
 
 </script>
 
