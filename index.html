@@ -257,8 +257,9 @@ seleccionados.forEach(id=>{
 
 // 🔥 BOLETA CON TODAS LAS HORAS
 const { jsPDF } = window.jspdf;
+const baseURL=window.location.href.split("?")[0];
 
-const textoQR=docente+" | "+seleccionados.join(", ")+" | "+fecha;
+const textoQR=baseURL+"?scan="+encodeURIComponent(semana+"||"+seleccionados.join(","));
 
 QRCode.toDataURL(textoQR,function(err,url){
 
@@ -416,7 +417,13 @@ snap.forEach(child=>{
 document.querySelectorAll(".slot").forEach(s=>{
 if(s.dataset.id===child.key){
 s.classList.add("ocupado");
-s.innerHTML=child.val().nombre;
+if(child.val().asistio){
+  s.style.background="#27ae60"; // verde
+}else{
+  s.style.background="#e67e22"; // naranja
+}
+
+s.innerHTML="<b>"+child.val().nombre+"</b>";
 }
 });
 });
@@ -523,6 +530,28 @@ crearHorario();
 cargar();
 
 </script>
+function detectarQR(){
+
+const params=new URLSearchParams(window.location.search);
+const data=params.get("scan");
+
+if(!data) return;
+
+const [semana,horarios]=data.split("||");
+const lista=horarios.split(",");
+
+// marcar asistencia
+lista.forEach(h=>{
+db.ref("reservas/"+semana+"/"+h+"/asistio").set(true);
+});
+
+alert("✅ Asistencia registrada");
+
+window.location.href=window.location.pathname;
+
+}
+
+detectarQR();
 
 </body>
 </html>
