@@ -13,36 +13,26 @@
 
 <style>
 body{font-family:Arial;margin:0;background:#1e3c72;color:white;text-align:center}
-
 .header{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px}
 .header img{width:60px}
-
 .container{background:white;color:black;margin:10px;padding:10px;border-radius:10px}
-
 select,button{padding:8px;margin:5px}
-
 table{width:100%;border-collapse:collapse}
 th{background:#2c3e50;color:white}
 td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
-
 .slot{cursor:pointer}
 .slot.seleccionado{background:#2ecc71;color:white}
 .slot.ocupado{color:white}
-
 .recreo{background:#f39c12;color:white;font-weight:bold}
-
 .admin{display:none}
-
-@media(max-width:700px){
-td{font-size:10px}
-}
+@media(max-width:700px){td{font-size:10px}}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-<img src="logo.jpeg">
+<img src="logo.jpg">
 <div>
 <h3>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h3>
 <h4>AULA DE INNOVACIÓN PEDAGÓGICA</h4>
@@ -95,6 +85,7 @@ td{font-size:10px}
 <option>CANDIA AGUILAR, MARCO ANTONIO</option>
 </select>
 
+
 <div id="horarios"></div>
 
 <button onclick="reservar()">Reservar</button>
@@ -102,13 +93,11 @@ td{font-size:10px}
 
 </div>
 
-<!-- ADMIN -->
 <div class="container admin" id="adminPanel">
 
 <h3>Panel Admin</h3>
 
 <button onclick="exportarExcel()">Excel</button>
-<button onclick="verRanking()">Ranking</button>
 <button onclick="verEstadisticas()">Estadísticas</button>
 
 <table>
@@ -130,7 +119,7 @@ td{font-size:10px}
 
 <script>
 
-// 🔥 COLOR POR DOCENTE
+// COLOR POR DOCENTE
 function obtenerColor(nombre){
 let hash=0;
 for(let i=0;i<nombre.length;i++){
@@ -162,10 +151,8 @@ let seleccionados=[];
 
 // CREAR HORARIO
 function crearHorario(){
-
 const cont=document.getElementById("horarios");
 cont.innerHTML="";
-
 const tabla=document.createElement("table");
 
 let header="<tr><th>Hora</th>";
@@ -174,12 +161,10 @@ header+="</tr>";
 tabla.innerHTML=header;
 
 horas.forEach(h=>{
-
 if(h==="RECREO"){
 tabla.innerHTML+=`<tr><td colspan="6" class="recreo">☕ RECREO (4:00-4:20)</td></tr>`;
 return;
 }
-
 let fila=`<tr><td>${h}</td>`;
 dias.forEach(d=>{
 let id=d+" "+h;
@@ -187,19 +172,16 @@ fila+=`<td class="slot" data-id="${id}">Disponible</td>`;
 });
 fila+="</tr>";
 tabla.innerHTML+=fila;
-
 });
 
 cont.appendChild(tabla);
 
-// MULTI SELECCIÓN
+// selección múltiple libre
 document.querySelectorAll(".slot").forEach(c=>{
 c.onclick=()=>{
-
 if(c.classList.contains("ocupado")) return;
 
 const id=c.dataset.id;
-const dia=id.split(" ")[0];
 
 if(seleccionados.includes(id)){
 seleccionados=seleccionados.filter(x=>x!==id);
@@ -207,20 +189,10 @@ c.classList.remove("seleccionado");
 return;
 }
 
-if(seleccionados.length>0){
-const diaBase=seleccionados[0].split(" ")[0];
-if(dia!==diaBase){
-seleccionados=[];
-document.querySelectorAll(".slot").forEach(x=>x.classList.remove("seleccionado"));
-}
-}
-
 seleccionados.push(id);
 c.classList.add("seleccionado");
-
 };
 });
-
 }
 
 // RESERVAR
@@ -231,27 +203,6 @@ const semana=document.getElementById("semana").value;
 
 if(!docente)return alert("Seleccione docente");
 if(seleccionados.length===0)return alert("Seleccione horario");
-
-const horasOrden=["1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00","4:20-5:05","5:05-5:50","5:50-6:35"];
-
-let porDia={};
-
-seleccionados.forEach(s=>{
-let [dia,hora]=s.split(" ");
-if(!porDia[dia])porDia[dia]=[];
-porDia[dia].push(hora);
-});
-
-for(let dia in porDia){
-let lista=porDia[dia];
-lista.sort((a,b)=>horasOrden.indexOf(a)-horasOrden.indexOf(b));
-for(let i=0;i<lista.length-1;i++){
-if(horasOrden.indexOf(lista[i+1])!==horasOrden.indexOf(lista[i])+1){
-alert("Horas no consecutivas en "+dia);
-return;
-}
-}
-}
 
 let checks=seleccionados.map(id=>db.ref("reservas/"+semana+"/"+id).once("value"));
 
@@ -274,9 +225,14 @@ fecha:fecha
 });
 });
 
-// PDF + QR
+// 🔥 QR CON LINK REAL
+const baseURL = window.location.origin + window.location.pathname;
+
+const textoQR = baseURL + "?scan=" + encodeURIComponent(
+  semana + "||" + seleccionados.join(",")
+);
+
 const { jsPDF } = window.jspdf;
-const textoQR=docente+" | "+seleccionados.join(", ")+" | "+fecha;
 
 QRCode.toDataURL(textoQR,function(err,url){
 
@@ -289,15 +245,11 @@ let y=50;
 doc.text("Horarios:",20,y);
 y+=10;
 
-for(let dia in porDia){
-doc.text(dia+":",20,y); y+=8;
-porDia[dia].forEach(h=>{
-doc.text("- "+h,25,y); y+=8;
+seleccionados.forEach(h=>{
+doc.text("- "+h,20,y);
+y+=10;
 });
-y+=5;
-}
 
-doc.text("Fecha: "+fecha,20,y);
 doc.addImage(url,"PNG",20,y+10,50,50);
 doc.text("PIP: YARVIN RS",20,y+70);
 
@@ -308,16 +260,31 @@ doc.save("boleta.pdf");
 seleccionados=[];
 document.querySelectorAll(".slot").forEach(x=>x.classList.remove("seleccionado"));
 
-alert("Reservas guardadas");
+alert("Reservado");
 cargar();
 
 });
+}
 
+// DETECTAR QR
+function detectarQR(){
+const params = new URLSearchParams(window.location.search);
+const data = params.get("scan");
+if(!data) return;
+
+const [semana, horarios] = data.split("||");
+const lista = horarios.split(",");
+
+lista.forEach(h=>{
+db.ref("reservas/"+semana+"/"+h+"/asistio").set(true);
+});
+
+alert("✅ Asistencia registrada");
+window.location.href = window.location.pathname;
 }
 
 // CARGAR
 function cargar(){
-
 const semana=document.getElementById("semana").value;
 
 document.querySelectorAll(".slot").forEach(s=>{
@@ -388,7 +355,6 @@ db.ref("reservas/"+s+"/"+h).remove();
 cargar();
 }
 
-// EXCEL
 function exportarExcel(){
 db.ref("reservas").once("value",snap=>{
 let csv="Semana,Horario,Docente\n";
@@ -405,24 +371,6 @@ a.click();
 });
 }
 
-// RANKING
-function verRanking(){
-db.ref("reservas").once("value",snap=>{
-let cont={};
-snap.forEach(sem=>{
-sem.forEach(h=>{
-let d=h.val();
-if(d.asistio){
-if(!cont[d.nombre])cont[d.nombre]=0;
-cont[d.nombre]++;
-}
-});
-});
-alert(JSON.stringify(cont,null,2));
-});
-}
-
-// ESTADISTICAS
 function verEstadisticas(){
 db.ref("reservas").once("value",snap=>{
 let total=0,asis=0;
@@ -443,6 +391,7 @@ document.getElementById("semana").addEventListener("change",cargar);
 
 crearHorario();
 cargar();
+detectarQR();
 
 </script>
 
