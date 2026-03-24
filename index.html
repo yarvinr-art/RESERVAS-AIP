@@ -27,7 +27,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 
 .slot{cursor:pointer}
 .slot.seleccionado{background:#2ecc71;color:white}
-.slot.ocupado{background:#7f8c8d;color:white}
+.slot.ocupado{color:white}
 
 .recreo{background:#f39c12;color:white;font-weight:bold}
 
@@ -72,9 +72,9 @@ td{font-size:10px}
 <option>LINDO CASTRO, JAVIER</option>
 <option>MAURICIO PERALES, BERNABE LUCIO</option>
 <option>ARUHUANCA CCOPA, HIPÓLITO</option>
-<option>VERA INGA MANUEL SALOMÓN</option>
 <option>DE LA CRUZ MARÍA</option>
 <option>MARTINEZ CARLOS</option>
+<option>VERA INGA MANUEL SALOMÓN</option>
 <option>MALAVER DIONICIO, ERIKA VERONICA</option>
 <option>CASTILLO ROMÁN MARÍA LIZZI</option>
 <option>RUA CARDENAS LISSET ROSALÍA</option>
@@ -130,6 +130,21 @@ td{font-size:10px}
 
 <script>
 
+// 🔥 COLOR POR DOCENTE
+function obtenerColor(nombre){
+let hash=0;
+for(let i=0;i<nombre.length;i++){
+hash = nombre.charCodeAt(i) + ((hash<<5)-hash);
+}
+let color="#";
+for(let i=0;i<3;i++){
+let value=(hash>>(i*8))&255;
+color+=("00"+value.toString(16)).slice(-2);
+}
+return color;
+}
+
+// FIREBASE
 const firebaseConfig={
 apiKey:"A...",
 authDomain:"ingreso-al-aip---2026.firebaseapp.com",
@@ -145,6 +160,7 @@ const horas=["1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00","RECREO","4:20-5:05
 
 let seleccionados=[];
 
+// CREAR HORARIO
 function crearHorario(){
 
 const cont=document.getElementById("horarios");
@@ -186,130 +202,17 @@ const id=c.dataset.id;
 const dia=id.split(" ")[0];
 
 if(seleccionados.includes(id)){
-  seleccionados=seleccionados.filter(x=>x!==id);
-  c.classList.remove("seleccionado");
-  return;
-}
-
-function reservar(){
-
-const docente=document.getElementById("docente").value;
-const semana=document.getElementById("semana").value;
-
-if(!docente)return alert("Seleccione docente");
-if(seleccionados.length===0)return alert("Seleccione horario");
-
-const horasOrden=["1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00","4:20-5:05","5:05-5:50","5:50-6:35"];
-
-// 🔥 AGRUPAR POR DÍA
-let porDia={};
-
-seleccionados.forEach(s=>{
-  let [dia,hora]=s.split(" ");
-  if(!porDia[dia]) porDia[dia]=[];
-  porDia[dia].push(hora);
-});
-
-// 🔥 VALIDAR CADA DÍA
-for(let dia in porDia){
-
-  let lista=porDia[dia];
-
-  // ordenar
-  lista.sort((a,b)=>horasOrden.indexOf(a)-horasOrden.indexOf(b));
-
-  // validar consecutivas
-  for(let i=0;i<lista.length-1;i++){
-    let actual=horasOrden.indexOf(lista[i]);
-    let sig=horasOrden.indexOf(lista[i+1]);
-
-    if(sig!==actual+1){
-      alert("En "+dia+" las horas deben ser consecutivas");
-      return;
-    }
-  }
-}
-
-// 🔥 VERIFICAR DISPONIBILIDAD
-let checks=seleccionados.map(id=>{
-  return db.ref("reservas/"+semana+"/"+id).once("value");
-});
-
-Promise.all(checks).then(res=>{
-
-for(let r of res){
-  if(r.exists()){
-    alert("Una hora ya está ocupada");
-    return;
-  }
-}
-
-// 🔥 GUARDAR
-const fecha=new Date().toLocaleString();
-
-seleccionados.forEach(id=>{
-  db.ref("reservas/"+semana+"/"+id).set({
-    nombre:docente,
-    asistio:false,
-    fecha:fecha
-  });
-});
-
-// 🔥 BOLETA CON TODAS LAS HORAS
-const { jsPDF } = window.jspdf;
-const baseURL=window.location.href.split("?")[0];
-
-const textoQR=baseURL+"?scan="+encodeURIComponent(semana+"||"+seleccionados.join(","));
-
-QRCode.toDataURL(textoQR,function(err,url){
-
-const doc=new jsPDF();
-
-doc.text("BOLETA AIP",20,20);
-doc.text("Docente: "+docente,20,40);
-
-let y=50;
-doc.text("Horarios:",20,y);
-y+=10;
-
-// AGRUPAR BONITO POR DÍA
-for(let dia in porDia){
-  doc.text(dia+":",20,y);
-  y+=8;
-
-  porDia[dia].forEach(h=>{
-    doc.text("- "+h,25,y);
-    y+=8;
-  });
-
-  y+=5;
-}
-
-doc.text("Fecha: "+fecha,20,y);
-doc.addImage(url,"PNG",20,y+10,50,50);
-doc.text("PIP: YARVIN RS",20,y+70);
-
-doc.save("boleta.pdf");
-
-});
-
-// LIMPIAR
-seleccionados=[];
-document.querySelectorAll(".slot").forEach(x=>x.classList.remove("seleccionado"));
-
-alert("Reservas guardadas");
-cargar();
-
-});
-
+seleccionados=seleccionados.filter(x=>x!==id);
+c.classList.remove("seleccionado");
+return;
 }
 
 if(seleccionados.length>0){
-  const diaBase=seleccionados[0].split(" ")[0];
-  if(dia!==diaBase){
-    alert("Debe ser el mismo día");
-    return;
-  }
+const diaBase=seleccionados[0].split(" ")[0];
+if(dia!==diaBase){
+seleccionados=[];
+document.querySelectorAll(".slot").forEach(x=>x.classList.remove("seleccionado"));
+}
 }
 
 seleccionados.push(id);
@@ -320,7 +223,7 @@ c.classList.add("seleccionado");
 
 }
 
-// RESERVAR MULTIPLE
+// RESERVAR
 function reservar(){
 
 const docente=document.getElementById("docente").value;
@@ -331,14 +234,22 @@ if(seleccionados.length===0)return alert("Seleccione horario");
 
 const horasOrden=["1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00","4:20-5:05","5:05-5:50","5:50-6:35"];
 
-seleccionados.sort((a,b)=>a.localeCompare(b));
+let porDia={};
 
-let indices=seleccionados.map(s=>horasOrden.indexOf(s.split(" ")[1]));
+seleccionados.forEach(s=>{
+let [dia,hora]=s.split(" ");
+if(!porDia[dia])porDia[dia]=[];
+porDia[dia].push(hora);
+});
 
-for(let i=0;i<indices.length-1;i++){
-if(indices[i+1]!==indices[i]+1){
-alert("Horas no consecutivas");
+for(let dia in porDia){
+let lista=porDia[dia];
+lista.sort((a,b)=>horasOrden.indexOf(a)-horasOrden.indexOf(b));
+for(let i=0;i<lista.length-1;i++){
+if(horasOrden.indexOf(lista[i+1])!==horasOrden.indexOf(lista[i])+1){
+alert("Horas no consecutivas en "+dia);
 return;
+}
 }
 }
 
@@ -363,7 +274,7 @@ fecha:fecha
 });
 });
 
-// BOLETA QR
+// PDF + QR
 const { jsPDF } = window.jspdf;
 const textoQR=docente+" | "+seleccionados.join(", ")+" | "+fecha;
 
@@ -376,15 +287,17 @@ doc.text("Docente: "+docente,20,40);
 
 let y=50;
 doc.text("Horarios:",20,y);
+y+=10;
 
-y+=10;
-seleccionados.forEach(h=>{
-doc.text("- "+h,20,y);
-y+=10;
+for(let dia in porDia){
+doc.text(dia+":",20,y); y+=8;
+porDia[dia].forEach(h=>{
+doc.text("- "+h,25,y); y+=8;
 });
+y+=5;
+}
 
 doc.text("Fecha: "+fecha,20,y);
-
 doc.addImage(url,"PNG",20,y+10,50,50);
 doc.text("PIP: YARVIN RS",20,y+70);
 
@@ -409,6 +322,7 @@ const semana=document.getElementById("semana").value;
 
 document.querySelectorAll(".slot").forEach(s=>{
 s.classList.remove("ocupado");
+s.style.background="";
 s.textContent="Disponible";
 });
 
@@ -416,14 +330,15 @@ db.ref("reservas/"+semana).once("value",snap=>{
 snap.forEach(child=>{
 document.querySelectorAll(".slot").forEach(s=>{
 if(s.dataset.id===child.key){
-s.classList.add("ocupado");
-if(child.val().asistio){
-  s.style.background="#27ae60"; // verde
-}else{
-  s.style.background="#e67e22"; // naranja
-}
 
-s.innerHTML="<b>"+child.val().nombre+"</b>";
+const nombre=child.val().nombre;
+const color=obtenerColor(nombre);
+
+s.classList.add("ocupado");
+s.style.background=color;
+s.style.color="white";
+
+s.innerHTML="<b>"+nombre+"</b>";
 }
 });
 });
@@ -530,28 +445,6 @@ crearHorario();
 cargar();
 
 </script>
-function detectarQR(){
-
-const params=new URLSearchParams(window.location.search);
-const data=params.get("scan");
-
-if(!data) return;
-
-const [semana,horarios]=data.split("||");
-const lista=horarios.split(",");
-
-// marcar asistencia
-lista.forEach(h=>{
-db.ref("reservas/"+semana+"/"+h+"/asistio").set(true);
-});
-
-alert("✅ Asistencia registrada");
-
-window.location.href=window.location.pathname;
-
-}
-
-detectarQR();
 
 </body>
 </html>
