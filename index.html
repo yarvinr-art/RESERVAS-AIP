@@ -3,107 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>AIP Reservas</title>
 
-<!-- PWA -->
-<link rel="manifest" href="manifest.json">
-
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<!-- PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<!-- QR -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
 <style>
-body{
-  font-family:Arial;
-  margin:0;
-  background: linear-gradient(135deg,#1e3c72,#2a5298);
-  color:white;
-  text-align:center;
-}
-
-.header img{
-  width:100px;
-  margin-top:10px;
-}
-
-.container{
-  background:white;
-  color:black;
-  margin:10px;
-  padding:15px;
-  border-radius:15px;
-}
-
-select, button{
-  width:90%;
-  padding:10px;
-  margin:8px;
-  border-radius:8px;
-  border:none;
-}
-
-.grid-container{
-  overflow-x:auto;
-}
-
-.grid{
-  display:grid;
-  grid-template-columns: repeat(6,120px);
-  gap:5px;
-}
-
-.slot{
-  background:#2ecc71;
-  color:white;
-  padding:12px;
-  border-radius:8px;
-  font-size:12px;
-}
-
-.ocupado{ background:#e74c3c; }
-.recreo{ background:#7f8c8d; }
-.seleccionado{ background:#f39c12; }
+body{font-family:Arial;margin:0;background:#1e3c72;color:white;text-align:center}
+.container{background:white;color:black;margin:10px;padding:10px;border-radius:10px}
+select,button{padding:10px;margin:5px;border-radius:6px;border:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px}
+.slot{padding:8px;background:#3498db;color:white;border-radius:6px;cursor:pointer}
+.slot.selected{background:#2ecc71}
+.ocupado{background:#7f8c8d;cursor:not-allowed}
+.admin{display:none}
+table{width:100%;border-collapse:collapse}
+td,th{border:1px solid #ccc;padding:5px}
 </style>
 </head>
 
 <body>
 
-<div class="header">
-  <img src="logo.jpeg">
-  <h3>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h3>
-  <h4>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h4>
-</div>
+<h2>📚 AULA DE INNOVACIÓN PEDAGÓGICA</h2>
 
 <div class="container">
 
-<button onclick="activarAdmin()">Modo Admin</button>
-
 <select id="docente">
-<option value="">Selecciona tutor</option>
-<option>1° A - ARUHUANCA</option>
-<option>2° A - CANDIA</option>
-<option>3° A - TARRILLO</option>
-<option>4° A - RUA</option>
-<option>5° A - AZURIN</option>
+<option value="">Seleccione docente</option>
+
+<option>REYNA TUESTA LUIS ENRIQUE</option>
+<option>CRUZ YCHO, BEATRIZ</option>
+<option>CARHUANCHO AVILES JANETH</option>
+<option>SALAS HUAYLLA, JORGE VICENTE</option>
+<option>CAMONES PULIDO, LEDGARDO</option>
+<option>PADILLA SANCHEZ, LORD ENRIQUE</option>
+<option>APAZA ROBLES ROBERTO JORGE</option>
+<option>JÁUREGUI SÁNCHEZ MANUEL</option>
+<option>VARILLAS ALANÍS, GENOVEVA</option>
+<option>LINDO CASTRO, JAVIER</option>
+<option>MAURICIO PERALES, BERNABE LUCIO</option>
+<option>VERA INGA MANUEL SALOMÓN</option>
+<option>MALAVER DIONICIO, ERIKA VERONICA</option>
+<option>CASTILLO ROMÁN MARÍA LIZZI</option>
+<option>RUA CARDENAS LISSET ROSALÍA</option>
+<option>TARRILLO TEJADA, FAUSTO</option>
+<option>ABANTO LEÓN IRMA</option>
+<option>HUAMAN YALICO, IRMA FAUSTINA</option>
+<option>MARTINEZ DURAND, ZOILA LILIANA</option>
+<option>JUMPA CAMPUZANO, SILVIA JACKELINE</option>
+<option>CHAVEZ MALAVER, CARMEN</option>
+<option>LLIUYALL CONDOR, ROSARIO</option>
+<option>WONG DELGADO, NIDIA ANGÉLICA</option>
+<option>VERA PALOMINO, RINA ESTHER</option>
+<option>CRISTOBAL, PATTY BELL</option>
+<option>GAMERO AGUILAR, CÉSAR AUGUSTO</option>
+<option>FLORES BERROCAL, MIGUEL ANGEL</option>
+<option>LUNA GUERRA, WALTER RAFAEL</option>
+<option>AZURIN SANTE, ELVIS</option>
+<option>CANDIA AGUILAR, MARCO ANTONIO</option>
+<option>MARTINEZ, CARLOS</option>
+<option>ARUHUANCA CCOPA, HIPÓLITO</option>
+<option>MARÍA DE LA CRUZ</option>
+
+<option value="ADMIN-2026">🔐 ADMIN</option>
 </select>
+
+<div class="grid" id="horarios"></div>
 
 <button onclick="reservar()">Reservar</button>
 
-<div class="grid-container">
-<div class="grid" id="tabla"></div>
 </div>
+
+<!-- PANEL ADMIN -->
+<div class="container admin" id="adminPanel">
+<h3>🔐 PANEL ADMIN</h3>
+
+<button onclick="exportarExcel()">📥 Excel</button>
+<button onclick="verRanking()">🏆 Ranking</button>
+<button onclick="verPorcentajes()">📊 %</button>
+<button onclick="generarInforme()">📄 Informe</button>
+
+<table>
+<thead>
+<tr>
+<th>Horario</th>
+<th>Docente</th>
+<th>Estado</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody id="tabla"></tbody>
+</table>
+
+<div id="extra"></div>
 
 </div>
 
 <script>
 
+// 🔥 FIREBASE (TU CONFIG)
 const firebaseConfig = {
   apiKey: "A...",
   authDomain: "ingreso-al-aip---2026.firebaseapp.com",
@@ -114,181 +114,214 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let admin = false;
-
-function activarAdmin(){
-  const clave = prompt("Clave admin:");
-  if(clave === "1234"){
-    admin = true;
-    alert("Modo admin activado");
-  }
-}
-
-const dias = ["Hora","Lunes","Martes","Miércoles","Jueves","Viernes"];
-
-const horas = [
+// HORARIOS
+const dias=["Lunes","Martes","Miércoles","Jueves","Viernes"];
+const horas=[
 "1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00",
-"RECREO",
 "4:20-5:05","5:05-5:50","5:50-6:35"
 ];
 
-let seleccionados = [];
-const tabla = document.getElementById("tabla");
+const cont=document.getElementById("horarios");
+let seleccion=null;
 
+// CREAR HORARIOS
 dias.forEach(d=>{
-  let div=document.createElement("div");
-  div.innerHTML="<b>"+d+"</b>";
-  tabla.appendChild(div);
-});
-
-horas.forEach(h=>{
-  dias.forEach((d,i)=>{
+  horas.forEach(h=>{
     let div=document.createElement("div");
+    div.className="slot";
+    div.textContent=d+" "+h;
 
-    if(i===0){
-      div.innerText=h;
-    }else{
+    div.onclick=()=>{
+      if(div.classList.contains("ocupado")) return;
+      document.querySelectorAll(".slot").forEach(s=>s.classList.remove("selected"));
+      div.classList.add("selected");
+      seleccion=div.textContent;
+    };
 
-      if(h==="RECREO"){
-        div.className="recreo";
-      }else{
-
-        div.className="slot";
-        div.dataset.id = d + "-" + h;
-
-        db.ref("reservas/"+div.dataset.id).on("value", snap=>{
-          if(snap.exists()){
-            div.classList.add("ocupado");
-            div.innerText = snap.val().nombre;
-          }
-        });
-
-        div.onclick=()=>{
-          if(div.classList.contains("ocupado")) return;
-
-          div.classList.toggle("seleccionado");
-
-          if(seleccionados.includes(div)){
-            seleccionados=seleccionados.filter(s=>s!==div);
-          }else{
-            seleccionados.push(div);
-          }
-        };
-
-        // ELIMINAR (ADMIN)
-        div.oncontextmenu = (e)=>{
-          e.preventDefault();
-          if(admin){
-            if(confirm("¿Eliminar reserva?")){
-              db.ref("reservas/"+div.dataset.id).remove();
-            }
-          }
-        };
-
-      }
-    }
-
-    tabla.appendChild(div);
+    cont.appendChild(div);
   });
 });
 
+// 🔐 ADMIN
+document.getElementById("docente").addEventListener("change",function(){
+  if(this.value==="ADMIN-2026"){
+    document.getElementById("adminPanel").style.display="block";
+    alert("Modo admin activado");
+  }
+});
+
+// 📌 RESERVAR
 function reservar(){
 
-  const docente = document.getElementById("docente").value;
+  const docente=document.getElementById("docente").value;
+  if(!docente || docente==="ADMIN-2026") return alert("Seleccione docente");
 
-  if(!docente) return alert("Selecciona tutor");
-  if(seleccionados.length===0) return alert("Selecciona horario");
+  if(!seleccion) return alert("Seleccione horario");
 
-  const { jsPDF } = window.jspdf;
-
-  db.ref("reservas").once("value", snapshot=>{
-
-    let yaReservo=false;
-
-    snapshot.forEach(child=>{
-      if(child.val().nombre === docente){
-        yaReservo=true;
-      }
-    });
-
-    if(yaReservo){
-      alert("Este tutor ya reservó");
+  db.ref("reservas/"+seleccion).once("value",snap=>{
+    if(snap.exists()){
+      alert("Horario ocupado");
       return;
     }
 
-    seleccionados.forEach(slot=>{
+    const fecha=new Date().toLocaleString();
 
-      const id = slot.dataset.id;
-
-      db.ref("reservas/"+id).once("value", snap=>{
-        if(snap.exists()){
-          alert("Horario ocupado");
-          return;
-        }
-
-        const fecha = new Date().toLocaleString();
-
-        db.ref("reservas/"+id).set({
-          nombre: docente,
-          fecha: fecha
-        });
-
-        const doc = new jsPDF();
-
-        doc.text("BOLETA AIP",20,20);
-        doc.text("Tutor: "+docente,20,40);
-        doc.text("Horario: "+id,20,50);
-
-        const url = window.location.origin + window.location.pathname + "#" + id;
-
-        const qrDiv = document.createElement("div");
-
-        new QRCode(qrDiv,{
-          text:url,
-          width:100,
-          height:100
-        });
-
-        setTimeout(()=>{
-          const img = qrDiv.querySelector("img").src;
-          doc.addImage(img,"PNG",140,20,50,50);
-          doc.save("boleta.pdf");
-        },500);
-
-      });
-
+    db.ref("reservas/"+seleccion).set({
+      nombre:docente,
+      asistio:false,
+      fecha:fecha
     });
 
-    alert("Reserva confirmada");
-    seleccionados=[];
+    generarQR(docente,seleccion,fecha);
 
+    alert("Reserva exitosa");
   });
-
 }
 
-// AUTO ASISTENCIA QR
-window.onload = function(){
+// 📱 QR + PDF
+function generarQR(nombre,horario,fecha){
 
-  const hash = window.location.hash;
+  const { jsPDF } = window.jspdf;
 
-  if(hash){
+  QRCode.toDataURL(nombre+"|"+horario+"|"+fecha,function(err,url){
 
-    const id = hash.replace("#","");
+    const doc=new jsPDF();
 
-    db.ref("reservas/"+id).update({
-      asistio:true,
-      horaIngreso:new Date().toLocaleString()
+    doc.text("BOLETA AIP",20,20);
+    doc.text("Docente: "+nombre,20,40);
+    doc.text("Horario: "+horario,20,50);
+    doc.text("Fecha: "+fecha,20,60);
+
+    doc.addImage(url,"PNG",20,70,50,50);
+    doc.text("PIP: YARVIN RS",20,130);
+
+    doc.save("boleta.pdf");
+
+  });
+}
+
+// 🔄 ACTUALIZAR TABLA + BLOQUEAR HORAS
+db.ref("reservas").on("value",snap=>{
+
+  const tabla=document.getElementById("tabla");
+  tabla.innerHTML="";
+
+  document.querySelectorAll(".slot").forEach(s=>s.classList.remove("ocupado"));
+
+  snap.forEach(child=>{
+    let d=child.val();
+
+    // bloquear visual
+    document.querySelectorAll(".slot").forEach(s=>{
+      if(s.textContent===child.key){
+        s.classList.add("ocupado");
+      }
     });
 
-    alert("Asistencia registrada");
+    tabla.innerHTML+=`
+    <tr>
+    <td>${child.key}</td>
+    <td>${d.nombre}</td>
+    <td>${d.asistio?"🟢":"🔴"}</td>
+    <td>
+    <button onclick="asistio('${child.key}')">✔</button>
+    <button onclick="eliminar('${child.key}')">🗑</button>
+    </td>
+    </tr>
+    `;
+  });
 
-  }
+});
 
-};
+// ✔ ASISTENCIA
+function asistio(h){
+  db.ref("reservas/"+h+"/asistio").set(true);
+}
 
-// SERVICE WORKER
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js");
+// 🗑 ELIMINAR
+function eliminar(h){
+  db.ref("reservas/"+h).remove();
+}
+
+// 📥 EXCEL
+function exportarExcel(){
+  db.ref("reservas").once("value",snap=>{
+    let csv="Horario,Docente,Asistencia\n";
+    snap.forEach(c=>{
+      let d=c.val();
+      csv+=`${c.key},${d.nombre},${d.asistio}\n`;
+    });
+    const blob=new Blob([csv]);
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="reporte.csv";
+    a.click();
+  });
+}
+
+// 🏆 RANKING
+function verRanking(){
+  db.ref("reservas").once("value",snap=>{
+    let cont={};
+    snap.forEach(c=>{
+      let d=c.val();
+      if(d.asistio){
+        if(!cont[d.nombre]) cont[d.nombre]=0;
+        cont[d.nombre]++;
+      }
+    });
+
+    let html="<h3>Ranking</h3>";
+    Object.entries(cont).sort((a,b)=>b[1]-a[1])
+    .forEach((r,i)=>{
+      html+=`${i+1}. ${r[0]} - ${r[1]}<br>`;
+    });
+
+    document.getElementById("extra").innerHTML=html;
+  });
+}
+
+// 📊 %
+function verPorcentajes(){
+  db.ref("reservas").once("value",snap=>{
+    let total={},asis={};
+
+    snap.forEach(c=>{
+      let d=c.val();
+      if(!total[d.nombre]){total[d.nombre]=0;asis[d.nombre]=0;}
+      total[d.nombre]++;
+      if(d.asistio) asis[d.nombre]++;
+    });
+
+    let html="<h3>% Asistencia</h3>";
+    for(let d in total){
+      let p=((asis[d]/total[d])*100).toFixed(1);
+      html+=`${d}: ${p}%<br>`;
+    }
+
+    document.getElementById("extra").innerHTML=html;
+  });
+}
+
+// 📄 INFORME
+function generarInforme(){
+  db.ref("reservas").once("value",snap=>{
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    let total=0,asis=0;
+
+    snap.forEach(c=>{
+      total++;
+      if(c.val().asistio) asis++;
+    });
+
+    doc.text("INFORME AIP",20,20);
+    doc.text("Total: "+total,20,40);
+    doc.text("Asistencia: "+asis,20,50);
+
+    doc.save("informe.pdf");
+  });
 }
 
 </script>
