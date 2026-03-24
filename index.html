@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>AIP PRO FINAL</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -16,23 +17,21 @@ body{font-family:Arial;margin:0;background:#1e3c72;color:white;text-align:center
 .header{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px}
 .header img{width:60px}
 .container{background:white;color:black;margin:10px;padding:10px;border-radius:10px}
-select,button{padding:8px;margin:5px}
 table{width:100%;border-collapse:collapse}
 th{background:#2c3e50;color:white}
 td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 .slot{cursor:pointer}
 .slot.seleccionado{background:#2ecc71;color:white}
 .slot.ocupado{color:white}
-.recreo{background:#f39c12;color:white;font-weight:bold}
+.recreo{background:#f39c12;color:white}
 .admin{display:none}
-@media(max-width:700px){td{font-size:10px}}
 </style>
 </head>
 
 <body>
 
 <div class="header">
-<img src="logo.jpeg">
+<img src="logo.jpg">
 <div>
 <h3>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h3>
 <h4>AULA DE INNOVACIÓN PEDAGÓGICA</h4>
@@ -95,10 +94,9 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 
 <div class="container admin" id="adminPanel">
 
-<h3>Panel Admin</h3>
+<h3>Registro por Semana</h3>
 
-<button onclick="exportarExcel()">Excel</button>
-<button onclick="verEstadisticas()">Estadísticas</button>
+<button onclick="exportarExcel()">📄 Excel</button>
 
 <table>
 <thead>
@@ -113,13 +111,14 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <tbody id="tabla"></tbody>
 </table>
 
+<h3>Estadística</h3>
 <canvas id="grafico"></canvas>
 
 </div>
 
 <script>
 
-// COLOR POR DOCENTE
+// COLOR
 function obtenerColor(nombre){
 let hash=0;
 for(let i=0;i<nombre.length;i++){
@@ -149,8 +148,9 @@ const horas=["1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00","RECREO","4:20-5:05
 
 let seleccionados=[];
 
-// CREAR HORARIO
+// HORARIO
 function crearHorario(){
+
 const cont=document.getElementById("horarios");
 cont.innerHTML="";
 const tabla=document.createElement("table");
@@ -162,7 +162,7 @@ tabla.innerHTML=header;
 
 horas.forEach(h=>{
 if(h==="RECREO"){
-tabla.innerHTML+=`<tr><td colspan="6" class="recreo">☕ RECREO (4:00-4:20)</td></tr>`;
+tabla.innerHTML+=`<tr><td colspan="6" class="recreo">RECREO</td></tr>`;
 return;
 }
 let fila=`<tr><td>${h}</td>`;
@@ -176,7 +176,6 @@ tabla.innerHTML+=fila;
 
 cont.appendChild(tabla);
 
-// selección múltiple libre
 document.querySelectorAll(".slot").forEach(c=>{
 c.onclick=()=>{
 if(c.classList.contains("ocupado")) return;
@@ -193,6 +192,7 @@ seleccionados.push(id);
 c.classList.add("seleccionado");
 };
 });
+
 }
 
 // RESERVAR
@@ -204,17 +204,6 @@ const semana=document.getElementById("semana").value;
 if(!docente)return alert("Seleccione docente");
 if(seleccionados.length===0)return alert("Seleccione horario");
 
-let checks=seleccionados.map(id=>db.ref("reservas/"+semana+"/"+id).once("value"));
-
-Promise.all(checks).then(res=>{
-
-for(let r of res){
-if(r.exists()){
-alert("Una hora ya está ocupada");
-return;
-}
-}
-
 const fecha=new Date().toLocaleString();
 
 seleccionados.forEach(id=>{
@@ -225,7 +214,7 @@ fecha:fecha
 });
 });
 
-// 🔥 QR CON LINK REAL
+// QR
 const baseURL = window.location.origin + window.location.pathname;
 
 const textoQR = baseURL + "?scan=" + encodeURIComponent(
@@ -242,17 +231,12 @@ doc.text("BOLETA AIP",20,20);
 doc.text("Docente: "+docente,20,40);
 
 let y=50;
-doc.text("Horarios:",20,y);
-y+=10;
-
 seleccionados.forEach(h=>{
 doc.text("- "+h,20,y);
 y+=10;
 });
 
 doc.addImage(url,"PNG",20,y+10,50,50);
-doc.text("PIP: YARVIN RS",20,y+70);
-
 doc.save("boleta.pdf");
 
 });
@@ -260,31 +244,34 @@ doc.save("boleta.pdf");
 seleccionados=[];
 document.querySelectorAll(".slot").forEach(x=>x.classList.remove("seleccionado"));
 
-alert("Reservado");
 cargar();
 
-});
 }
 
-// DETECTAR QR
+// QR
 function detectarQR(){
-const params = new URLSearchParams(window.location.search);
-const data = params.get("scan");
-if(!data) return;
 
-const [semana, horarios] = data.split("||");
-const lista = horarios.split(",");
+const params=new URLSearchParams(window.location.search);
+const data=params.get("scan");
+
+if(!data)return;
+
+const [semana,horarios]=data.split("||");
+const lista=horarios.split(",");
 
 lista.forEach(h=>{
 db.ref("reservas/"+semana+"/"+h+"/asistio").set(true);
 });
 
-alert("✅ Asistencia registrada");
-window.location.href = window.location.pathname;
+alert("Asistencia registrada");
+
+window.location.href=window.location.pathname;
+
 }
 
 // CARGAR
 function cargar(){
+
 const semana=document.getElementById("semana").value;
 
 document.querySelectorAll(".slot").forEach(s=>{
@@ -304,14 +291,15 @@ const color=obtenerColor(nombre);
 s.classList.add("ocupado");
 s.style.background=color;
 s.style.color="white";
+s.innerHTML=nombre;
 
-s.innerHTML="<b>"+nombre+"</b>";
 }
 });
 });
 });
 
 cargarAdmin();
+cargarGrafico();
 }
 
 // ADMIN
@@ -319,29 +307,54 @@ function activarAdmin(){
 if(prompt("Clave")=="yarvin2026"){
 document.getElementById("adminPanel").style.display="block";
 cargarAdmin();
+cargarGrafico();
 }
 }
 
 function cargarAdmin(){
+
+const semana=document.getElementById("semana").value;
 const tabla=document.getElementById("tabla");
 tabla.innerHTML="";
 
-db.ref("reservas").once("value",snap=>{
-snap.forEach(sem=>{
-sem.forEach(h=>{
+db.ref("reservas/"+semana).once("value",snap=>{
+snap.forEach(h=>{
 tabla.innerHTML+=`
 <tr>
-<td>${sem.key}</td>
+<td>${semana}</td>
 <td>${h.key}</td>
 <td>${h.val().nombre}</td>
 <td>${h.val().asistio?"🟢":"🔴"}</td>
 <td>
-<button onclick="asistio('${sem.key}','${h.key}')">✔</button>
-<button onclick="eliminar('${sem.key}','${h.key}')">🗑</button>
+<button onclick="asistio('${semana}','${h.key}')">✔</button>
+<button onclick="eliminar('${semana}','${h.key}')">🗑</button>
 </td>
 </tr>`;
 });
 });
+}
+
+// GRAFICO
+function cargarGrafico(){
+
+const semana=document.getElementById("semana").value;
+
+db.ref("reservas/"+semana).once("value",snap=>{
+let total=0,asis=0;
+
+snap.forEach(h=>{
+total++;
+if(h.val().asistio)asis++;
+});
+
+new Chart(document.getElementById("grafico"),{
+type:"doughnut",
+data:{
+labels:["Asistió","Faltó"],
+datasets:[{data:[asis,total-asis]}]
+}
+});
+
 });
 }
 
@@ -355,36 +368,27 @@ db.ref("reservas/"+s+"/"+h).remove();
 cargar();
 }
 
+// EXCEL
 function exportarExcel(){
-db.ref("reservas").once("value",snap=>{
-let csv="Semana,Horario,Docente\n";
-snap.forEach(sem=>{
-sem.forEach(h=>{
-csv+=`${sem.key},${h.key},${h.val().nombre}\n`;
+
+const semana=document.getElementById("semana").value;
+
+db.ref("reservas/"+semana).once("value",snap=>{
+
+let csv="Semana,Horario,Docente,Asistencia\n";
+
+snap.forEach(h=>{
+csv+=`${semana},${h.key},${h.val().nombre},${h.val().asistio?"SI":"NO"}\n`;
 });
-});
+
 let blob=new Blob([csv]);
 let a=document.createElement("a");
 a.href=URL.createObjectURL(blob);
-a.download="reporte.csv";
+a.download="asistencia_"+semana+".csv";
 a.click();
-});
-}
 
-function verEstadisticas(){
-db.ref("reservas").once("value",snap=>{
-let total=0,asis=0;
-snap.forEach(sem=>{
-sem.forEach(h=>{
-total++;
-if(h.val().asistio)asis++;
 });
-});
-new Chart(document.getElementById("grafico"),{
-type:"doughnut",
-data:{labels:["Asistió","Faltó"],datasets:[{data:[asis,total-asis]}]}
-});
-});
+
 }
 
 document.getElementById("semana").addEventListener("change",cargar);
