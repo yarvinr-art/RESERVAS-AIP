@@ -14,13 +14,16 @@
 body{font-family:Arial;margin:0;background:#1e3c72;color:white;text-align:center}
 .container{background:white;color:black;margin:10px;padding:10px;border-radius:10px}
 select,button{padding:10px;margin:5px;border-radius:6px;border:none}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:5px}
-.slot{padding:8px;background:#3498db;color:white;border-radius:6px;cursor:pointer}
-.slot.selected{background:#2ecc71}
-.ocupado{background:#7f8c8d;cursor:not-allowed}
-.admin{display:none}
+
 table{width:100%;border-collapse:collapse}
-td,th{border:1px solid #ccc;padding:5px}
+th{background:#2c3e50;color:white;padding:8px}
+td{border:1px solid #ccc;padding:8px;text-align:center;font-size:12px}
+
+.slot{cursor:pointer}
+.slot.seleccionado{background:#2ecc71;color:white}
+.slot.ocupado{background:#7f8c8d;color:white;cursor:not-allowed}
+
+.admin{display:none}
 </style>
 </head>
 
@@ -67,10 +70,9 @@ td,th{border:1px solid #ccc;padding:5px}
 <option>ARUHUANCA CCOPA, HIPÓLITO</option>
 <option>MARÍA DE LA CRUZ</option>
 
-<option value="ADMIN-2026">🔐 ADMIN</option>
 </select>
 
-<div class="grid" id="horarios"></div>
+<div id="horarios"></div>
 
 <button onclick="reservar()">Reservar</button>
 
@@ -103,7 +105,7 @@ td,th{border:1px solid #ccc;padding:5px}
 
 <script>
 
-// 🔥 FIREBASE (TU CONFIG)
+// 🔥 FIREBASE
 const firebaseConfig = {
   apiKey: "A...",
   authDomain: "ingreso-al-aip---2026.firebaseapp.com",
@@ -124,45 +126,44 @@ const horas=[
 const cont=document.getElementById("horarios");
 let seleccion=null;
 
-// CREAR HORARIOS
-dias.forEach(d=>{
-  horas.forEach(h=>{
-    let div=document.createElement("div");
-    div.className="slot";
-    div.textContent=d+" "+h;
+// TABLA HORARIO
+const tabla=document.createElement("table");
 
-    div.onclick=()=>{
-      if(div.classList.contains("ocupado")) return;
-      document.querySelectorAll(".slot").forEach(s=>s.classList.remove("selected"));
-      div.classList.add("selected");
-      seleccion=div.textContent;
-    };
+let header="<tr><th>Hora</th>";
+dias.forEach(d=> header+=`<th>${d}</th>`);
+header+="</tr>";
+tabla.innerHTML=header;
 
-    cont.appendChild(div);
+horas.forEach(h=>{
+  let fila=`<tr><td><b>${h}</b></td>`;
+  dias.forEach(d=>{
+    let id=d+" "+h;
+    fila+=`<td class="slot" data-id="${id}">Disponible</td>`;
   });
+  fila+="</tr>";
+  tabla.innerHTML+=fila;
 });
 
-// 🔐 ADMIN
-document.getElementById("docente").addEventListener("change",function(){
-  if(this.value==="ADMIN-2026"){
-    document.getElementById("adminPanel").style.display="block";
-    alert("Modo admin activado");
-  }
+cont.appendChild(tabla);
+
+// EVENTO
+document.querySelectorAll(".slot").forEach(celda=>{
+  celda.onclick=()=>{
+    if(celda.classList.contains("ocupado")) return;
+    document.querySelectorAll(".slot").forEach(c=>c.classList.remove("seleccionado"));
+    celda.classList.add("seleccionado");
+    seleccion=celda.dataset.id;
+  };
 });
 
-// 📌 RESERVAR
+// RESERVAR
 function reservar(){
-
   const docente=document.getElementById("docente").value;
-  if(!docente || docente==="ADMIN-2026") return alert("Seleccione docente");
-
+  if(!docente) return alert("Seleccione docente");
   if(!seleccion) return alert("Seleccione horario");
 
   db.ref("reservas/"+seleccion).once("value",snap=>{
-    if(snap.exists()){
-      alert("Horario ocupado");
-      return;
-    }
+    if(snap.exists()) return alert("Horario ocupado");
 
     const fecha=new Date().toLocaleString();
 
@@ -178,43 +179,39 @@ function reservar(){
   });
 }
 
-// 📱 QR + PDF
+// QR
 function generarQR(nombre,horario,fecha){
-
   const { jsPDF } = window.jspdf;
 
   QRCode.toDataURL(nombre+"|"+horario+"|"+fecha,function(err,url){
-
     const doc=new jsPDF();
-
     doc.text("BOLETA AIP",20,20);
     doc.text("Docente: "+nombre,20,40);
     doc.text("Horario: "+horario,20,50);
     doc.text("Fecha: "+fecha,20,60);
-
     doc.addImage(url,"PNG",20,70,50,50);
     doc.text("PIP: YARVIN RS",20,130);
-
     doc.save("boleta.pdf");
-
   });
 }
 
-// 🔄 ACTUALIZAR TABLA + BLOQUEAR HORAS
+// ACTUALIZAR
 db.ref("reservas").on("value",snap=>{
-
   const tabla=document.getElementById("tabla");
   tabla.innerHTML="";
 
-  document.querySelectorAll(".slot").forEach(s=>s.classList.remove("ocupado"));
+  document.querySelectorAll(".slot").forEach(s=>{
+    s.classList.remove("ocupado");
+    s.textContent="Disponible";
+  });
 
   snap.forEach(child=>{
     let d=child.val();
 
-    // bloquear visual
     document.querySelectorAll(".slot").forEach(s=>{
-      if(s.textContent===child.key){
+      if(s.dataset.id===child.key){
         s.classList.add("ocupado");
+        s.innerHTML="<b>"+d.nombre+"</b>";
       }
     });
 
@@ -230,20 +227,13 @@ db.ref("reservas").on("value",snap=>{
     </tr>
     `;
   });
-
 });
 
-// ✔ ASISTENCIA
-function asistio(h){
-  db.ref("reservas/"+h+"/asistio").set(true);
-}
+// ADMIN FUNCIONES
+function asistio(h){ db.ref("reservas/"+h+"/asistio").set(true); }
+function eliminar(h){ db.ref("reservas/"+h).remove(); }
 
-// 🗑 ELIMINAR
-function eliminar(h){
-  db.ref("reservas/"+h).remove();
-}
-
-// 📥 EXCEL
+// EXCEL
 function exportarExcel(){
   db.ref("reservas").once("value",snap=>{
     let csv="Horario,Docente,Asistencia\n";
@@ -259,7 +249,7 @@ function exportarExcel(){
   });
 }
 
-// 🏆 RANKING
+// RANKING
 function verRanking(){
   db.ref("reservas").once("value",snap=>{
     let cont={};
@@ -273,15 +263,13 @@ function verRanking(){
 
     let html="<h3>Ranking</h3>";
     Object.entries(cont).sort((a,b)=>b[1]-a[1])
-    .forEach((r,i)=>{
-      html+=`${i+1}. ${r[0]} - ${r[1]}<br>`;
-    });
+    .forEach((r,i)=> html+=`${i+1}. ${r[0]} - ${r[1]}<br>`);
 
     document.getElementById("extra").innerHTML=html;
   });
 }
 
-// 📊 %
+// PORCENTAJE
 function verPorcentajes(){
   db.ref("reservas").once("value",snap=>{
     let total={},asis={};
@@ -303,14 +291,13 @@ function verPorcentajes(){
   });
 }
 
-// 📄 INFORME
+// INFORME
 function generarInforme(){
   db.ref("reservas").once("value",snap=>{
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    const doc=new jsPDF();
 
     let total=0,asis=0;
-
     snap.forEach(c=>{
       total++;
       if(c.val().asistio) asis++;
@@ -319,10 +306,23 @@ function generarInforme(){
     doc.text("INFORME AIP",20,20);
     doc.text("Total: "+total,20,40);
     doc.text("Asistencia: "+asis,20,50);
-
     doc.save("informe.pdf");
   });
 }
+
+// 🔐 ADMIN OCULTO
+let clave="";
+document.addEventListener("keydown",function(e){
+  clave+=e.key;
+
+  if(clave.includes("yarvin2026")){
+    document.getElementById("adminPanel").style.display="block";
+    alert("🔐 Modo administrador activado");
+    clave="";
+  }
+
+  if(clave.length>20) clave="";
+});
 
 </script>
 
