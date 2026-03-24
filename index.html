@@ -3,21 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AIP PRO</title>
+<title>AIP PRO FINAL</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{font-family:Arial;margin:0;background:#1e3c72;color:white;text-align:center}
-.container{background:white;color:black;margin:10px;padding:10px;border-radius:10px}
+
+.header{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:10px;
+padding:10px;
+}
+
+.header img{width:60px}
+
+.container{
+background:white;color:black;margin:10px;padding:10px;border-radius:10px
+}
 
 select,button{padding:8px;margin:5px}
 
 table{width:100%;border-collapse:collapse}
 th{background:#2c3e50;color:white}
-td{border:1px solid #ccc;padding:6px;font-size:12px}
+td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 
 .slot{cursor:pointer}
 .slot.seleccionado{background:#2ecc71;color:white}
@@ -27,18 +42,21 @@ td{border:1px solid #ccc;padding:6px;font-size:12px}
 
 .admin{display:none}
 
-/* 📱 RESPONSIVE */
 @media(max-width:700px){
-td{font-size:10px;padding:4px}
-th{font-size:11px}
+td{font-size:10px}
 }
 </style>
 </head>
 
 <body>
 
+<div class="header">
+<img src="logo.jpeg">
+<div>
 <h3>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h3>
 <h4>AULA DE INNOVACIÓN PEDAGÓGICA</h4>
+</div>
+</div>
 
 <div class="container">
 
@@ -62,25 +80,6 @@ th{font-size:11px}
 <option>VARILLAS ALANÍS, GENOVEVA</option>
 <option>LINDO CASTRO, JAVIER</option>
 <option>MAURICIO PERALES, BERNABE LUCIO</option>
-<option>VERA INGA MANUEL SALOMÓN</option>
-<option>MALAVER DIONICIO, ERIKA VERONICA</option>
-<option>CASTILLO ROMÁN MARÍA LIZZI</option>
-<option>RUA CARDENAS LISSET ROSALÍA</option>
-<option>TARRILLO TEJADA, FAUSTO</option>
-<option>ABANTO LEÓN IRMA</option>
-<option>HUAMAN YALICO, IRMA FAUSTINA</option>
-<option>MARTINEZ DURAND, ZOILA LILIANA</option>
-<option>JUMPA CAMPUZANO, SILVIA JACKELINE</option>
-<option>CHAVEZ MALAVER, CARMEN</option>
-<option>LLIUYALL CONDOR, ROSARIO</option>
-<option>WONG DELGADO, NIDIA ANGÉLICA</option>
-<option>VERA PALOMINO, RINA ESTHER</option>
-<option>CRISTOBAL, PATTY BELL</option>
-<option>GAMERO AGUILAR, CÉSAR AUGUSTO</option>
-<option>FLORES BERROCAL, MIGUEL ANGEL</option>
-<option>LUNA GUERRA, WALTER RAFAEL</option>
-<option>AZURIN SANTE, ELVIS</option>
-<option>CANDIA AGUILAR, MARCO ANTONIO</option>
 </select>
 
 <div id="horarios"></div>
@@ -118,6 +117,7 @@ th{font-size:11px}
 
 <script>
 
+// FIREBASE
 const firebaseConfig={
 apiKey:"A...",
 authDomain:"ingreso-al-aip---2026.firebaseapp.com",
@@ -148,7 +148,7 @@ tabla.innerHTML=header;
 horas.forEach(h=>{
 
 if(h==="RECREO"){
-tabla.innerHTML+=`<tr><td colspan="6" class="recreo">RECREO 4:00-4:20</td></tr>`;
+tabla.innerHTML+=`<tr><td colspan="6" class="recreo">☕ RECREO (4:00-4:20)</td></tr>`;
 return;
 }
 
@@ -175,7 +175,9 @@ seleccion=c.dataset.id;
 
 }
 
+// RESERVA + QR
 function reservar(){
+
 const docente=document.getElementById("docente").value;
 const semana=document.getElementById("semana").value;
 
@@ -186,9 +188,27 @@ let ruta="reservas/"+semana+"/"+seleccion;
 db.ref(ruta).once("value",snap=>{
 if(snap.exists())return alert("Ocupado");
 
-db.ref(ruta).set({nombre:docente,asistio:false});
+const fecha=new Date().toLocaleString();
+
+db.ref(ruta).set({nombre:docente,asistio:false,fecha:fecha});
+
+// 🔥 GENERAR QR + PDF
+const { jsPDF } = window.jspdf;
+
+QRCode.toDataURL(docente+"|"+seleccion+"|"+fecha,function(err,url){
+const doc=new jsPDF();
+doc.text("BOLETA AIP",20,20);
+doc.text("Docente: "+docente,20,40);
+doc.text("Horario: "+seleccion,20,50);
+doc.text("Fecha: "+fecha,20,60);
+doc.addImage(url,"PNG",20,70,50,50);
+doc.text("PIP: YARVIN RS",20,130);
+doc.save("boleta.pdf");
+});
+
 cargar();
 });
+
 }
 
 function cargar(){
@@ -298,10 +318,7 @@ if(h.val().asistio)asis++;
 });
 new Chart(document.getElementById("grafico"),{
 type:"doughnut",
-data:{
-labels:["Asistió","Faltó"],
-datasets:[{data:[asis,total-asis]}]
-}
+data:{labels:["Asistió","Faltó"],datasets:[{data:[asis,total-asis]}]}
 });
 });
 }
