@@ -92,10 +92,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <option>MANTENIMIENTO SEMANAL</option>
 </select>
 
-<button onclick="imprimirHorario()" class="btn-print">
-🖨️ Imprimir Horario
-</button>
-
+<button onclick="imprimirHorario()">🖨️ Imprimir Horario</button>
 <div id="horarios"></div>
 
 <button onclick="reservar()">Reservar</button>
@@ -142,46 +139,6 @@ color+=("00"+value.toString(16)).slice(-2);
 }
 return color;
 }
-
-<style>
-.btn-print{
-  background:#2c3e50;
-  color:white;
-  padding:10px 15px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-  margin:10px;
-  font-weight:bold;
-}
-.btn-print:hover{
-  background:#1a252f;
-}
-
-/* 🖨️ SOLO PARA IMPRESIÓN */
-@media print {
-
-body *{
-  visibility:hidden;
-}
-
-#zonaImprimir, #zonaImprimir *{
-  visibility:visible;
-}
-
-#zonaImprimir{
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-}
-
-button{
-  display:none;
-}
-
-}
-</style>
 
 // FIREBASE
 const firebaseConfig={
@@ -447,14 +404,49 @@ document.getElementById("semana").addEventListener("change",cargar);
 crearHorario();
 cargar();
 detectarQR();
+
+</script>
 <script>
+function imprimirHorario() {
+    const contenido = document.getElementById("horario").innerHTML;
+    const ventana = window.open('', '', 'width=1000,height=800');
 
-function imprimirHorario(){
-  window.print();
+    ventana.document.write(`
+        <html>
+        <head>
+            <title>Horario</title>
+            <style>
+                body {
+                    font-family: Arial;
+                    padding: 20px;
+                }
+                table {
+                    border-collapse: collapse;
+                    width: 100%;
+                }
+                th, td {
+                    border: 1px solid black;
+                    padding: 10px;
+                    text-align: center;
+                }
+                th {
+                    background: #f2f2f2;
+                }
+                h2 {
+                    text-align: center;
+                }
+            </style>
+        </head>
+        <body>
+            <h2>HORARIO DE AULA DE INNOVACIÓN</h2>
+            ${contenido}
+        </body>
+        </html>
+    `);
+
+    ventana.document.close();
+    ventana.print();
 }
-
 </script>
-</script>
-
 </body>
 </html>
