@@ -410,42 +410,58 @@ detectarQR();
 <script>
 function imprimirHorario() {
 
-    const semana = document.getElementById("semana").value;
+    const contenido = document.getElementById("horarios");
 
-    let contenido = "";
-
-    if (semana === "1") {
-        contenido = document.getElementById("horario1").innerHTML;
-    } else {
-        contenido = document.getElementById("horario2").innerHTML;
+    if (!contenido) {
+        alert("No se encontró el horario");
+        return;
     }
 
-    const ventana = window.open('', '', 'width=900,height=700');
+    const ventana = window.open('', '_blank');
 
+    ventana.document.open();
     ventana.document.write(`
         <html>
         <head>
             <title>Horario AIP</title>
             <style>
-                body { font-family: Arial; text-align: center; }
-                table { border-collapse: collapse; width: 100%; }
-                th, td { border: 1px solid black; padding: 8px; }
+                body {
+                    font-family: Arial;
+                    text-align: center;
+                    padding: 20px;
+                }
+                table {
+                    border-collapse: collapse;
+                    width: 100%;
+                }
+                th, td {
+                    border: 1px solid black;
+                    padding: 8px;
+                    text-align: center;
+                }
             </style>
         </head>
         <body>
+
             <h2>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h2>
             <h3>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h3>
-            <h4>${document.getElementById("semana").options[document.getElementById("semana").selectedIndex].text}</h4>
+            <h4>${document.getElementById("semana").value}</h4>
 
-            ${contenido}
+            ${contenido.outerHTML}
 
-            <p>PIP: YARVIN RS</p>
+            <p><b>PIP: YARVIN RS</b></p>
+
         </body>
         </html>
     `);
 
     ventana.document.close();
-    ventana.print();
+
+    // 🔥 ESPERAR A QUE CARGUE
+    ventana.onload = function () {
+        ventana.focus();
+        ventana.print();
+    };
 }
 </script>
 </body>
