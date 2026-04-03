@@ -93,6 +93,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 </select>
 
 <button onclick="imprimirHorario()">🖨️ Imprimir Horario</button>
+
 <div id="horarios"></div>
 
 <button onclick="reservar()">Reservar</button>
@@ -408,38 +409,37 @@ detectarQR();
 </script>
 <script>
 function imprimirHorario() {
-    const contenido = document.getElementById("horario").innerHTML;
-    const ventana = window.open('', '', 'width=1000,height=800');
+
+    const semana = document.getElementById("semana").value;
+
+    let contenido = "";
+
+    if (semana === "1") {
+        contenido = document.getElementById("horario1").innerHTML;
+    } else {
+        contenido = document.getElementById("horario2").innerHTML;
+    }
+
+    const ventana = window.open('', '', 'width=900,height=700');
 
     ventana.document.write(`
         <html>
         <head>
-            <title>Horario</title>
+            <title>Horario AIP</title>
             <style>
-                body {
-                    font-family: Arial;
-                    padding: 20px;
-                }
-                table {
-                    border-collapse: collapse;
-                    width: 100%;
-                }
-                th, td {
-                    border: 1px solid black;
-                    padding: 10px;
-                    text-align: center;
-                }
-                th {
-                    background: #f2f2f2;
-                }
-                h2 {
-                    text-align: center;
-                }
+                body { font-family: Arial; text-align: center; }
+                table { border-collapse: collapse; width: 100%; }
+                th, td { border: 1px solid black; padding: 8px; }
             </style>
         </head>
         <body>
-            <h2>HORARIO DE AULA DE INNOVACIÓN</h2>
+            <h2>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h2>
+            <h3>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h3>
+            <h4>${document.getElementById("semana").options[document.getElementById("semana").selectedIndex].text}</h4>
+
             ${contenido}
+
+            <p>PIP: YARVIN RS</p>
         </body>
         </html>
     `);
