@@ -92,6 +92,9 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <option>MANTENIMIENTO SEMANAL</option>
 </select>
 
+<button onclick="imprimirHorario()" class="btn-print">
+🖨️ Imprimir Horario
+</button>
 
 <div id="horarios"></div>
 
@@ -139,6 +142,46 @@ color+=("00"+value.toString(16)).slice(-2);
 }
 return color;
 }
+
+<style>
+.btn-print{
+  background:#2c3e50;
+  color:white;
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  margin:10px;
+  font-weight:bold;
+}
+.btn-print:hover{
+  background:#1a252f;
+}
+
+/* 🖨️ SOLO PARA IMPRESIÓN */
+@media print {
+
+body *{
+  visibility:hidden;
+}
+
+#zonaImprimir, #zonaImprimir *{
+  visibility:visible;
+}
+
+#zonaImprimir{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+}
+
+button{
+  display:none;
+}
+
+}
+</style>
 
 // FIREBASE
 const firebaseConfig={
@@ -404,7 +447,13 @@ document.getElementById("semana").addEventListener("change",cargar);
 crearHorario();
 cargar();
 detectarQR();
+<script>
 
+function imprimirHorario(){
+  window.print();
+}
+
+</script>
 </script>
 
 </body>
