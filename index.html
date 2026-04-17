@@ -96,6 +96,22 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <option>MANTENIMIENTO SEMANAL</option>
 </select>
 
+<br>
+<select id="tema">
+<option value="">📚 Elige el tema de la sesión</option>
+<option>Placement Test</option>
+<option>Khan Academy</option>
+<option>Office 365</option>
+<option>Canva Educativo</option>
+<option>Google Classroom</option>
+<option>Robótica / Scratch</option>
+<option>Seguridad Digital</option>
+<option>Formularios Google</option>
+<option>Presentaciones Digitales</option>
+<option>Edición de Video</option>
+<option>Otro</option>
+</select>
+
 <button onclick="imprimirHorario()">🖨️ Imprimir Horario</button>
 
 <div id="horarios"></div>
@@ -117,6 +133,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <th>Semana</th>
 <th>Horario</th>
 <th>Docente</th>
+<th>Tema</th>
 <th>Asistencia</th>
 <th>Acción</th>
 </tr>
@@ -252,8 +269,10 @@ function reservar(){
 
 const docente=document.getElementById("docente").value;
 const semana=document.getElementById("semana").value;
+const tema=document.getElementById("tema").value;
 
 if(!docente)return alert("Seleccione docente");
+if(!tema)return alert("Seleccione el tema de la sesión");
 if(seleccionados.length===0)return alert("Seleccione horario");
 
 const fecha=new Date().toLocaleString();
@@ -261,6 +280,7 @@ const fecha=new Date().toLocaleString();
 seleccionados.forEach(id=>{
 db.ref("reservas/"+semana+"/"+id).set({
 nombre:docente,
+tema:tema,
 asistio:false,
 fecha:fecha
 });
@@ -346,12 +366,13 @@ document.querySelectorAll(".slot").forEach(s=>{
 if(s.dataset.id===child.key){
 
 const nombre=child.val().nombre;
+const tema=child.val().tema||"";
 const color=obtenerColor(nombre);
 
 s.classList.add("ocupado");
 s.style.background=color;
 s.style.color="white";
-s.innerHTML=nombre;
+s.innerHTML=`<b>${nombre}</b>${tema ? `<br><span style="font-size:10px;opacity:0.9">📚 ${tema}</span>` : ""}`;
 
 }
 });
@@ -384,6 +405,7 @@ tabla.innerHTML+=`
 <td>${semana}</td>
 <td>${h.key}</td>
 <td>${h.val().nombre}</td>
+<td>${h.val().tema||"-"}</td>
 <td>${h.val().asistio?"🟢":"🔴"}</td>
 <td>
 <button onclick="asistio('${semana}','${h.key}')">✔</button>
@@ -435,10 +457,10 @@ const semana=document.getElementById("semana").value;
 
 db.ref("reservas/"+semana).once("value",snap=>{
 
-let csv="Semana,Horario,Docente,Asistencia\n";
+let csv="Semana,Horario,Docente,Tema,Asistencia\n";
 
 snap.forEach(h=>{
-csv+=`${semana},${h.key},${h.val().nombre},${h.val().asistio?"SI":"NO"}\n`;
+csv+=`${semana},${h.key},${h.val().nombre},${h.val().tema||"-"},${h.val().asistio?"SI":"NO"}\n`;
 });
 
 let blob=new Blob([csv]);
