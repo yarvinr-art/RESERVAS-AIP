@@ -25,6 +25,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 .slot.ocupado{color:white}
 .recreo{background:#f39c12;color:white}
 .admin{display:none}
+.fecha-dia{font-size:11px;font-weight:normal;opacity:0.85}
 </style>
 </head>
 
@@ -43,6 +44,9 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <select id="semana">
 <option>Semana del 6 al 10 Abril</option>
 <option>Semana del 13 al 17 Abril</option>
+<option>Semana del 20 al 24 Abril</option>
+<option>Semana del 27 Abril al 1 Mayo</option>
+<option>Semana del 4 al 8 Mayo</option>
 </select>
 
 <br>
@@ -127,6 +131,29 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 
 <script>
 
+// FECHAS DE INICIO (Lunes) POR SEMANA
+const fechasInicioSemana = {
+  "Semana del 6 al 10 Abril":       new Date(2025, 3, 6),   // 6 Abril
+  "Semana del 13 al 17 Abril":      new Date(2025, 3, 13),  // 13 Abril
+  "Semana del 20 al 24 Abril":      new Date(2025, 3, 20),  // 20 Abril
+  "Semana del 27 Abril al 1 Mayo":  new Date(2025, 3, 27),  // 27 Abril
+  "Semana del 4 al 8 Mayo":         new Date(2025, 4, 4),   // 4 Mayo
+};
+
+const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+function obtenerFechasDias(semana) {
+  const inicio = fechasInicioSemana[semana];
+  if (!inicio) return ["Lunes","Martes","Miércoles","Jueves","Viernes"];
+
+  const nombres = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
+  return nombres.map((dia, i) => {
+    const fecha = new Date(inicio);
+    fecha.setDate(inicio.getDate() + i);
+    return { nombre: dia, dia: fecha.getDate(), mes: meses[fecha.getMonth()] };
+  });
+}
+
 // COLOR
 function obtenerColor(nombre){
 let hash=0;
@@ -160,12 +187,21 @@ let seleccionados=[];
 // HORARIO
 function crearHorario(){
 
+const semana = document.getElementById("semana").value;
+const diasConFecha = obtenerFechasDias(semana);
+
 const cont=document.getElementById("horarios");
 cont.innerHTML="";
 const tabla=document.createElement("table");
 
 let header="<tr><th>Hora</th>";
-dias.forEach(d=>header+=`<th>${d}</th>`);
+diasConFecha.forEach(d => {
+  if (typeof d === "object") {
+    header += `<th>${d.nombre}<br><span class="fecha-dia">${d.dia} ${d.mes}</span></th>`;
+  } else {
+    header += `<th>${d}</th>`;
+  }
+});
 header+="</tr>";
 tabla.innerHTML=header;
 
@@ -204,6 +240,13 @@ c.classList.add("seleccionado");
 
 }
 
+// SEMANAS SIN BOLETA PDF
+const semanasSinBoleta = [
+  "Semana del 20 al 24 Abril",
+  "Semana del 27 Abril al 1 Mayo",
+  "Semana del 4 al 8 Mayo"
+];
+
 // RESERVAR
 function reservar(){
 
@@ -223,7 +266,15 @@ fecha:fecha
 });
 });
 
-// QR
+// Verificar si esta semana genera boleta
+if(semanasSinBoleta.includes(semana)){
+  seleccionados=[];
+  document.querySelectorAll(".slot").forEach(x=>x.classList.remove("seleccionado"));
+  cargar();
+  return;
+}
+
+// QR y BOLETA PDF solo para semanas habilitadas
 const baseURL = window.location.origin + window.location.pathname;
 
 const textoQR = baseURL + "?scan=" + encodeURIComponent(
@@ -400,7 +451,10 @@ a.click();
 
 }
 
-document.getElementById("semana").addEventListener("change",cargar);
+document.getElementById("semana").addEventListener("change",()=>{
+  crearHorario();
+  cargar();
+});
 
 crearHorario();
 cargar();
@@ -439,6 +493,11 @@ function imprimirHorario() {
                     padding: 8px;
                     text-align: center;
                 }
+                .fecha-dia {
+                    font-size: 11px;
+                    font-weight: normal;
+                    opacity: 0.85;
+                }
             </style>
         </head>
         <body>
@@ -457,7 +516,6 @@ function imprimirHorario() {
 
     ventana.document.close();
 
-    // 🔥 ESPERAR A QUE CARGUE
     ventana.onload = function () {
         ventana.focus();
         ventana.print();
