@@ -1,1556 +1,543 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Tiendita — IE N° 0148 MVRHDT</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import {
-    getFirestore, collection, doc, getDoc, getDocs, setDoc,
-    updateDoc, addDoc, deleteDoc, query, orderBy, serverTimestamp,
-    runTransaction
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<title>RESERVAS DE HORARIO</title>
 
-  /* ══════════════════════════════════════
-     🔧 CONFIGURACIÓN FIREBASE
-     ══════════════════════════════════════ */
-  const firebaseConfig = {
-    apiKey:            "AIzaSyBdz5Cptq0TD6dPVox3yY0zZ3yi_7txNxA",
-    authDomain:        "tienda-aip.firebaseapp.com",
-    projectId:         "tienda-aip",
-    storageBucket:     "tienda-aip.firebasestorage.app",
-    messagingSenderId: "141367494309",
-    appId:             "1:141367494309:web:0e663a5ba26ba60bd1ef4c"
-  };
-
-  /* ── Ciclos CNEB Secundaria ── */
-  const CICLO = { "1ro":"VI","2do":"VI","3ro":"VII","4to":"VII","5to":"VII" };
-
-  const app = initializeApp(firebaseConfig);
-  const db  = getFirestore(app);
-
-  /* ── Estado global ── */
-  let currentUser = null;
-  let currentRole = null;
-  let allItems    = [];
-  let storeStatus = { open:false, bimestre:"" };
-  let canjeTarget = null;
-  let ptsTarget   = null;      // Para agregar puntos
-  let quitarPtsTarget = null;  // NUEVO: Para quitar puntos
-  let khanPts     = 0;
-
-  const $   = id => document.getElementById(id);
-  const fmt = d  => d ? new Date(d.seconds ? d.seconds*1000 : d).toLocaleDateString("es-PE") : "—";
-
-  /* ── Bimestre actual ── */
-  const bimestreActual = () => {
-    const n = new Date();
-    const m = n.getMonth() + 1;
-    const a = n.getFullYear();
-    const num = m <= 2 ? 1 : m <= 4 ? 2 : m <= 6 ? 3 : m <= 8 ? 4 : m <= 10 ? 5 : 6;
-    return `${a}-B${num}`;
-  };
-
-  const bimestreLabel = (clave) => {
-    if (!clave) return "—";
-    const meses = [
-      ["Ene-Feb","Enero-Febrero"],["Mar-Abr","Marzo-Abril"],
-      ["May-Jun","Mayo-Junio"],["Jul-Ago","Julio-Agosto"],
-      ["Set-Oct","Setiembre-Octubre"],["Nov-Dic","Noviembre-Diciembre"]
-    ];
-    const m = clave.match(/(\d{4})-B(\d)/);
-    if (!m) return clave;
-    const idx = parseInt(m[2]) - 1;
-    return `${meses[idx]?.[1] || "Bimestre "+m[2]} ${m[1]}`;
-  };
-
-  /* ── Hash SHA-256 (seguridad de contraseñas) ── */
-  async function hashPwd(pwd) {
-    const enc = new TextEncoder();
-    const buf = await crypto.subtle.digest("SHA-256", enc.encode(pwd));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
-  }
-
-  /* ── Verificar contraseña (compatible con cuentas antiguas sin hash) ── */
-  async function checkPwd(stored, input) {
-    if (stored.length === 64 && /^[0-9a-f]+$/.test(stored)) {
-      return stored === await hashPwd(input);
-    }
-    return stored === input; // compatibilidad con cuentas antiguas
-  }
-
-  function showMsg(id,txt,type){
-    const el=$(id); if(!el)return;
-    el.textContent=txt; el.className="msg "+type;
-    setTimeout(()=>{el.className="msg";el.textContent="";},3500);
-  }
-
-  function calcKhanPts(min,ej){
-    let p=0;
-    p+=Math.floor(min/10)*5;
-    p+=ej*5;
-    if(ej>=4) p+=10;
-    return p;
-  }
-
-  /* ════════════════════════════
-     LOGIN
-  ════════════════════════════ */
-  window.setLoginTab = tab => {
-    document.querySelectorAll(".tab-btn").forEach((b,i)=>
-      b.classList.toggle("active",(i===0&&tab==="student")||(i===1&&tab==="admin")));
-    $("loginStudent").style.display=tab==="student"?"":"none";
-    $("loginAdmin").style.display=tab==="admin"?"":"none";
-  };
-  window.toggleRegister = show => {
-    $("registerForm").style.display=show?"":"none";
-    $("loginForm").style.display=show?"none":"";
-  };
-
-  window.registrar = async () => {
-    const username=$("regUser").value.trim().toLowerCase().replace(/\s+/g,"_");
-    const pass=$("regPass").value;
-    const grado=$("regGrado").value;
-    const seccion=$("regSeccion").value;
-    const nombre=$("regNombre").value.trim();
-    if(!username||!pass||!nombre) return showMsg("msgLogin","Completa todos los campos","error");
-    if(pass.length<4) return showMsg("msgLogin","Contraseña mínimo 4 caracteres","error");
-    if(!/^[a-z0-9_]+$/.test(username)) return showMsg("msgLogin","Solo letras minúsculas, números y guión bajo","error");
-    const snap=await getDoc(doc(db,"students",username));
-    if(snap.exists()) return showMsg("msgLogin","Ese usuario ya existe, elige otro","error");
-    const ciclo=CICLO[grado]||"VI";
-    const hashed = await hashPwd(pass);
-    await setDoc(doc(db,"students",username),{
-      username, pass:hashed, nombre, grado, seccion, ciclo, pts:0,
-      createdAt:serverTimestamp(), khanData:{minutos:0,ejerciciosAprobados:0}
-    });
-    showMsg("msgLogin","¡Cuenta creada! Ya puedes ingresar","success");
-    toggleRegister(false);
-  };
-
-  window.loginStudent = async () => {
-    const username=$("loginUser").value.trim().toLowerCase();
-    const pass=$("loginPass").value;
-    if(!username||!pass) return showMsg("msgLogin","Completa los campos","error");
-    const snap=await getDoc(doc(db,"students",username));
-    if(!snap.exists()) return showMsg("msgLogin","Usuario no encontrado","error");
-    const data=snap.data();
-    const ok = await checkPwd(data.pass, pass);
-    if(!ok) return showMsg("msgLogin","Contraseña incorrecta","error");
-    currentUser={id:username,...data};
-    currentRole="student";
-    await loadStoreStatus();
-    showStudentDash();
-  };
-
-  window.loginAdmin = async () => {
-    const inputPass = $("adminPass").value;
-    if(!inputPass) return showMsg("msgLogin","Ingresa la contraseña","error");
-    /* Verificar contra Firestore config/admin */
-    const snap = await getDoc(doc(db,"config","admin"));
-    if(!snap.exists()){
-      /* Primera vez: crear con hash de la contraseña por defecto */
-      const defHash = await hashPwd("aip0148admin");
-      await setDoc(doc(db,"config","admin"),{passHash:defHash});
-      const ok = await checkPwd(defHash, inputPass);
-      if(!ok) return showMsg("msgLogin","Contraseña incorrecta","error");
-    } else {
-      const ok = await checkPwd(snap.data().passHash, inputPass);
-      if(!ok) return showMsg("msgLogin","Contraseña incorrecta","error");
-    }
-    currentRole="admin";
-    showAdminDash();
-  };
-
-  window.logout = () => {
-    currentUser=null; currentRole=null;
-    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-    $("loginScreen").classList.add("active");
-  };
-
-  /* ════════════════════════════
-     TIENDA STATUS
-  ════════════════════════════ */
-  async function loadStoreStatus(){
-    const snap=await getDoc(doc(db,"config","tienda"));
-    storeStatus=snap.exists()?snap.data():{open:false,bimestre:""};
-  }
-
-  /* ════════════════════════════
-     ESTUDIANTE
-  ════════════════════════════ */
-  async function showStudentDash(){
-    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-    $("studentScreen").classList.add("active");
-    await refreshStudent();
-    setStuTab("inicio");
-  }
-
-  async function refreshStudent(){
-    const snap=await getDoc(doc(db,"students",currentUser.id));
-    currentUser={id:currentUser.id,...snap.data()};
-    const s=currentUser;
-    $("navPts").textContent=s.pts+" pts";
-    $("navUser").textContent=s.nombre+" · "+s.grado+"° "+s.seccion+" · Ciclo "+s.ciclo;
-    $("stu-pts-total").textContent=s.pts;
-    $("stu-ciclo-badge").textContent="Ciclo "+s.ciclo+" — "+(s.ciclo==="VI"?"1ro y 2do de Secundaria":"3ro, 4to y 5to de Secundaria");
-    const k=s.khanData||{};
-    const min=k.minutos||0;
-    const ej=k.ejerciciosAprobados||0;
-    $("prog-min").style.width=Math.min(100,(min/120)*100)+"%";
-    $("prog-min-lbl").textContent=min+" min esta semana";
-    $("p-min-txt").textContent=min+"/120 min";
-    $("prog-ej").style.width=Math.min(100,(ej/4)*100)+"%";
-    $("prog-ej-lbl").textContent=ej+"/4 ejercicios ≥80%";
-    $("p-ej-txt").textContent=ej+"/4";
-  }
-
-  window.setStuTab = async tab => {
-    document.querySelectorAll(".stu-tab").forEach((b,i)=>
-      b.classList.toggle("active",["inicio","tienda","ranking","historial"][i]===tab));
-    document.querySelectorAll(".stu-panel").forEach(p=>p.classList.remove("active"));
-    $("stu-"+tab).classList.add("active");
-    if(tab==="tienda"){await loadStoreStatus();renderTienda();}
-    if(tab==="ranking") renderRanking();
-    if(tab==="historial") loadHistorial();
-  };
-
-  async function renderTienda(){
-    const c=$("items-container"); const banner=$("store-banner");
-    if(!storeStatus.open){
-      banner.innerHTML=`<div class="store-closed">
-        <div class="sc-icon">🔒</div>
-        <div class="sc-title">Tienda cerrada</div>
-        <div class="sc-sub">El profesor abrirá la tienda al finalizar el bimestre para que puedas canjear tus puntos acumulados.</div>
-      </div>`; c.innerHTML=""; return;
-    }
-    banner.innerHTML=`<div class="store-open-banner">✅ Tienda abierta — ${bimestreLabel(storeStatus.bimestre)}</div>`;
-    const snap=await getDocs(collection(db,"items"));
-    allItems=snap.docs.map(d=>({id:d.id,...d.data()}));
-    const s=currentUser;
-    if(!allItems.length){c.innerHTML='<p class="empty">No hay premios disponibles</p>';return;}
-    c.innerHTML=allItems.map(item=>{
-      const ok=s.pts>=item.pts&&item.stock>0;
-      return `<div class="item-card ${ok?"can-afford":""}">
-        <div class="item-emoji">${item.emoji||"🎁"}</div>
-        <div class="item-name">${item.name}</div>
-        <div class="item-pts">${item.pts} pts</div>
-        <div class="item-stock">${item.stock>98?"∞":item.stock} disponibles</div>
-        <button class="btn-canjear" ${!ok?"disabled":""} onclick="abrirCanje('${item.id}')">
-          ${item.stock===0?"Agotado":!ok?"Faltan pts":"Canjear"}
-        </button>
-      </div>`;
-    }).join("");
-  }
-
-  async function renderRanking(){
-    const snap=await getDocs(collection(db,"students"));
-    const cicloU=currentUser.ciclo;
-    const mismo=snap.docs.map(d=>({id:d.id,...d.data()}))
-      .filter(s=>s.ciclo===cicloU).sort((a,b)=>b.pts-a.pts);
-    const c=$("ranking-container");
-    if(!mismo.length){c.innerHTML='<p class="empty">Sin estudiantes en tu ciclo aún</p>';return;}
-    c.innerHTML=`
-      <div class="ranking-header">
-        <span class="rank-ciclo-badge">Ciclo ${cicloU}</span>
-        <span class="rank-count">${mismo.length} estudiantes</span>
-      </div>
-      ${mismo.map((s,i)=>{
-        const isMe=s.id===currentUser.id;
-        const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":"";
-        return `<div class="rank-row ${isMe?"rank-me":""}">
-          <div class="rank-pos">${medal||"#"+(i+1)}</div>
-          <div class="rank-info">
-            <div class="rank-name">${s.nombre}${isMe?' <span class="rank-you">(tú)</span>':""}</div>
-            <div class="rank-detail">${s.grado}° ${s.seccion}</div>
-          </div>
-          <div class="rank-pts">${s.pts} pts</div>
-        </div>`;
-      }).join("")}`;
-  }
-
-  async function loadHistorial(){
-    const q=query(collection(db,"students",currentUser.id,"history"),orderBy("fecha","desc"));
-    const snap=await getDocs(q);
-    const c=$("historial-container");
-    if(snap.empty){c.innerHTML='<p class="empty">Sin movimientos aún</p>';return;}
-    c.innerHTML=snap.docs.map(d=>{
-      const h=d.data();
-      return `<div class="hist-item">
-        <div><div class="hist-name">${h.desc}</div><div class="hist-date">${fmt(h.fecha)}</div></div>
-        <div class="hist-pts ${h.pts>0?"positive":"negative"}">${h.pts>0?"+":""}${h.pts} pts</div>
-      </div>`;
-    }).join("");
-  }
-
-  window.abrirCanje = id => {
-    canjeTarget=allItems.find(i=>i.id===id); if(!canjeTarget)return;
-    $("modal-title").textContent="Canjear: "+canjeTarget.name+" "+(canjeTarget.emoji||"");
-    $("modal-body").textContent="Se descontarán "+canjeTarget.pts+" puntos de tu cuenta. ¿Confirmas?";
-    $("modalCanje").classList.add("open");
-  };
-  window.closeModal=()=>{$("modalCanje").classList.remove("open");canjeTarget=null;};
-
-  /* Canje con transacción Firestore para evitar race conditions en el stock */
-  window.confirmarCanje = async () => {
-    if(!canjeTarget)return;
-    if(!storeStatus.open){closeModal();return alert("La tienda está cerrada en este momento.");}
-    const s=currentUser;
-    if(s.pts<canjeTarget.pts){closeModal();return;}
-    try {
-      await runTransaction(db, async (tx) => {
-        const stuRef  = doc(db,"students",s.id);
-        const itemRef = doc(db,"items",canjeTarget.id);
-        const stuSnap  = await tx.get(stuRef);
-        const itemSnap = await tx.get(itemRef);
-        if(!stuSnap.exists()) throw new Error("Estudiante no encontrado");
-        if(!itemSnap.exists()) throw new Error("Premio no encontrado");
-        const stuData  = stuSnap.data();
-        const itemData = itemSnap.data();
-        if(stuData.pts < itemData.pts) throw new Error("Puntos insuficientes");
-        if(itemData.stock < 99 && itemData.stock <= 0) throw new Error("Premio agotado");
-        tx.update(stuRef,{pts: stuData.pts - itemData.pts});
-        if(itemData.stock < 99) tx.update(itemRef,{stock: itemData.stock - 1});
-      });
-      /* Registrar historial fuera de la transacción */
-      await addDoc(collection(db,"students",s.id,"history"),{
-        desc:"Canje: "+canjeTarget.name, pts:-canjeTarget.pts,
-        fecha:serverTimestamp(), tipo:"canje"
-      });
-      await addDoc(collection(db,"canjes"),{
-        userId:s.id, nombre:s.nombre, grado:s.grado, seccion:s.seccion, ciclo:s.ciclo,
-        item:canjeTarget.name, emoji:canjeTarget.emoji||"🎁", pts:canjeTarget.pts,
-        fecha:serverTimestamp(), bimestre:bimestreActual()
-      });
-      closeModal();
-      await refreshStudent();
-      await renderTienda();
-    } catch(e){
-      closeModal();
-      alert("No se pudo completar el canje: "+e.message);
-    }
-  };
-
-  /* ════════════════════════════
-     ADMIN
-  ════════════════════════════ */
-  async function showAdminDash(){
-    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-    $("adminScreen").classList.add("active");
-    await loadStoreStatus();
-    renderStoreToggle();
-    setAdminTab("estudiantes");
-  }
-
-  function renderStoreToggle(){
-    const btn=$("btn-store-toggle"); const lbl=$("store-status-lbl");
-    if(storeStatus.open){
-      btn.textContent="🔒 Cerrar tienda"; btn.className="btn-store danger";
-      lbl.innerHTML='<span class="status-open">● ABIERTA</span> — '+bimestreLabel(storeStatus.bimestre||"");
-    } else {
-      btn.textContent="🔓 Abrir tienda del bimestre"; btn.className="btn-store success";
-      lbl.innerHTML='<span class="status-closed">● CERRADA</span>';
-    }
-  }
-
-  window.toggleStore = async () => {
-    const newOpen=!storeStatus.open;
-    storeStatus={open:newOpen, bimestre:newOpen?bimestreActual():""};
-    await setDoc(doc(db,"config","tienda"),storeStatus);
-    renderStoreToggle();
-    alert(newOpen?"✅ Tienda ABIERTA. Los estudiantes ya pueden canjear sus puntos.":"🔒 Tienda CERRADA.");
-  };
-
-  window.setAdminTab = tab => {
-    document.querySelectorAll(".admin-tab").forEach((b,i)=>
-      b.classList.toggle("active",["estudiantes","khan","premios","canjes","ranking"][i]===tab)); // NUEVO: agregado "ranking"
-    document.querySelectorAll(".admin-panel").forEach(p=>p.classList.remove("active"));
-    $("admin-"+tab).classList.add("active");
-    if(tab==="estudiantes") adminEstudiantes();
-    if(tab==="khan")        adminKhan();
-    if(tab==="premios")     adminPremios();
-    if(tab==="canjes")      adminCanjes();
-    if(tab==="ranking")     adminRanking(); // NUEVO
-  };
-
-  async function adminEstudiantes(){
-    const snap=await getDocs(collection(db,"students"));
-    const all=snap.docs.map(d=>({id:d.id,...d.data()}))
-      .sort((a,b)=>a.grado.localeCompare(b.grado)||a.seccion.localeCompare(b.seccion)||a.nombre.localeCompare(b.nombre));
-    const vi=all.filter(s=>s.ciclo==="VI");
-    const vii=all.filter(s=>s.ciclo==="VII");
-    const filas=lista=>lista.length?lista.map(s=>`<tr>
-        <td><code class="code-chip">${s.username||s.id}</code></td>
-        <td>${s.nombre}</td>
-        <td>${s.grado}° ${s.seccion}</td>
-        <td><strong>${s.pts}</strong></td>
-        <td>
-          <button class="btn-pts" onclick="abrirPtsModal('${s.id}','${s.nombre.replace(/'/g,"\\'")}')">+ Puntos</button>
-          <!-- NUEVO: Botón para quitar puntos -->
-          <button class="btn-quitar" onclick="abrirQuitarPtsModal('${s.id}','${s.nombre.replace(/'/g,"\\'")}')">– Puntos</button>
-          <button class="btn-danger" onclick="eliminarEst('${s.id}','${s.nombre.replace(/'/g,"\\'")}')">Eliminar</button>
-        </td>
-      </tr>`).join("")
-      :'<tr><td colspan="5" class="empty-td">Sin estudiantes registrados</td></tr>';
-    $("tbody-vi").innerHTML=filas(vi);
-    $("count-vi").textContent=vi.length+" estudiante"+(vi.length!==1?"s":"");
-    $("tbody-vii").innerHTML=filas(vii);
-    $("count-vii").textContent=vii.length+" estudiante"+(vii.length!==1?"s":"");
-  }
-
-  window.eliminarEst = async (id,nombre) => {
-    if(!confirm("¿Eliminar a "+nombre+"? No se puede deshacer."))return;
-    await deleteDoc(doc(db,"students",id));
-    adminEstudiantes();
-  };
-
-  // NUEVO: Función para abrir modal de quitar puntos
-  window.abrirQuitarPtsModal = (id, nombre) => {
-    quitarPtsTarget = { id, nombre };
-    $("modal-quitar-pts-user").textContent = nombre;
-    $("modal-quitar-pts-val").value = "";
-    $("modal-quitar-pts-motivo").value = "";
-    $("modalQuitarPts").classList.add("open");
-  };
-
-  window.closeQuitarPtsModal = () => {
-    $("modalQuitarPts").classList.remove("open");
-    quitarPtsTarget = null;
-  };
-
-  window.confirmarQuitarPts = async () => {
-    const val = parseInt($("modal-quitar-pts-val").value) || 0;
-    const motivo = $("modal-quitar-pts-motivo").value.trim() || "Ajuste de puntos";
-    if (val <= 0) return alert("Ingresa un valor mayor a 0.");
-    const snap = await getDoc(doc(db, "students", quitarPtsTarget.id));
-    const s = snap.data();
-    const ptsActuales = s.pts || 0;
-    if (val > ptsActuales) {
-      if (!confirm(`El estudiante solo tiene ${ptsActuales} pts. ¿Deseas restar ${ptsActuales} pts y dejarlo en 0?`)) {
-        return;
-      }
-    }
-    const ptsARestar = Math.min(val, ptsActuales); // no permite negativos
-    await updateDoc(doc(db, "students", quitarPtsTarget.id), { pts: ptsActuales - ptsARestar });
-    await addDoc(collection(db, "students", quitarPtsTarget.id, "history"), {
-      desc: `Quitar puntos: ${motivo}`, pts: -ptsARestar, fecha: serverTimestamp(), tipo: "ajuste"
-    });
-    closeQuitarPtsModal();
-    adminEstudiantes();
-  };
-
-  async function adminKhan(){
-    const snap=await getDocs(collection(db,"students"));
-    const all=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.nombre.localeCompare(b.nombre));
-    $("khan-student").innerHTML=all.length
-      ?all.map(s=>`<option value="${s.id}">${s.nombre} — ${s.grado}° ${s.seccion} (Ciclo ${s.ciclo})</option>`).join("")
-      :"<option>Sin estudiantes</option>";
-    $("khan-preview").style.display="none"; khanPts=0;
-  }
-
-  window.calcularKhan = () => {
-    const min=parseInt($("khan-minutos").value)||0;
-    const ej=parseInt($("khan-ejercicios").value)||0;
-    if(ej<0||ej>4)return alert("Los ejercicios aprobados deben ser entre 0 y 4.");
-    khanPts=calcKhanPts(min,ej);
-    $("khan-desglose").innerHTML=
-      "• Minutos: "+Math.floor(min/10)*5+" pts ("+Math.floor(min/10)+" bloques de 10 min)<br>"+
-      "• Ejercicios aprobados ("+ej+"×5): "+ej*5+" pts<br>"+
-      (ej>=4?"• Bonus todos completos: +10 pts<br>":"")+
-      "<strong>Total a asignar: "+khanPts+" pts</strong>";
-    $("khan-preview").style.display="";
-  };
-
-  window.asignarKhan = async () => {
-    if(khanPts<=0)return alert("Primero calcula los puntos.");
-    const userId=$("khan-student").value;
-    const min=parseInt($("khan-minutos").value)||0;
-    const ej=parseInt($("khan-ejercicios").value)||0;
-    const semana=$("khan-semana").value||"Semana registrada";
-    const snap=await getDoc(doc(db,"students",userId));
-    if(!snap.exists())return alert("Estudiante no encontrado.");
-    const s=snap.data();
-    await updateDoc(doc(db,"students",userId),{
-      pts:(s.pts||0)+khanPts,
-      khanData:{minutos:min,ejerciciosAprobados:ej}
-    });
-    await addDoc(collection(db,"students",userId,"history"),{
-      desc:"Khan Academy ("+semana+"): "+min+" min, "+ej+"/4 ejercicios ≥80%",
-      pts:khanPts, fecha:serverTimestamp(), tipo:"khan"
-    });
-    alert("✅ "+khanPts+" pts asignados correctamente a "+s.nombre);
-    $("khan-minutos").value=$("khan-ejercicios").value=$("khan-semana").value="";
-    $("khan-preview").style.display="none"; khanPts=0;
-    adminEstudiantes();
-  };
-
-  async function adminPremios(){
-    const snap=await getDocs(collection(db,"items"));
-    allItems=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.pts-b.pts);
-    $("tbody-premios").innerHTML=allItems.length
-      ?allItems.map(item=>`<tr>
-          <td>${item.emoji||"🎁"} ${item.name}</td>
-          <td>${item.pts}</td>
-          <td>${item.stock>98?"∞":item.stock}</td>
-          <td><button class="btn-danger" onclick="eliminarPremio('${item.id}')">Eliminar</button></td>
-        </tr>`).join("")
-      :'<tr><td colspan="4" class="empty-td">Sin premios aún.</td></tr>';
-  }
-
-  window.agregarPremio = async () => {
-    const nombre=$("premio-nombre").value.trim();
-    const emoji=$("premio-emoji").value.trim()||"🎁";
-    const pts=parseInt($("premio-puntos").value)||0;
-    const stock=parseInt($("premio-stock").value)||0;
-    if(!nombre||pts<1)return alert("Completa el nombre y los puntos.");
-    await addDoc(collection(db,"items"),{name:nombre,emoji,pts,stock,createdAt:serverTimestamp()});
-    $("premio-nombre").value=$("premio-emoji").value=$("premio-puntos").value=$("premio-stock").value="";
-    adminPremios();
-  };
-
-  window.eliminarPremio = async id => {
-    if(!confirm("¿Eliminar este premio?"))return;
-    await deleteDoc(doc(db,"items",id)); adminPremios();
-  };
-
-  async function adminCanjes(){
-    const q=query(collection(db,"canjes"),orderBy("fecha","desc"));
-    const snap=await getDocs(q);
-    $("tbody-canjes").innerHTML=snap.empty
-      ?'<tr><td colspan="6" class="empty-td">Sin canjes registrados</td></tr>'
-      :snap.docs.map(d=>{
-          const c=d.data();
-          return `<tr>
-            <td>${c.nombre}</td>
-            <td>${c.grado}° ${c.seccion}</td>
-            <td><span class="badge ${c.ciclo==="VI"?"badge-vi":"badge-vii"}">Ciclo ${c.ciclo}</span></td>
-            <td>${c.emoji||"🎁"} ${c.item}</td>
-            <td>${c.pts}</td>
-            <td>${fmt(c.fecha)}</td>
-          </tr>`;
-        }).join("");
-  }
-
-  // NUEVO: Función para mostrar ranking en panel admin
-  async function adminRanking() {
-    const snap = await getDocs(collection(db, "students"));
-    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const cicloVI = all.filter(s => s.ciclo === "VI").sort((a, b) => b.pts - a.pts);
-    const cicloVII = all.filter(s => s.ciclo === "VII").sort((a, b) => b.pts - a.pts);
-
-    const renderTablaRanking = (lista, ciclo) => {
-      if (!lista.length) return '<p class="empty">Sin estudiantes en este ciclo</p>';
-      return `
-        <div class="table-wrap" style="margin-bottom:2rem;">
-          <table>
-            <thead><tr><th>Pos.</th><th>Estudiante</th><th>Grado/Sección</th><th>Puntos</th></tr></thead>
-            <tbody>
-              ${lista.map((s, i) => {
-                const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i+1}`;
-                return `<tr>
-                  <td>${medal}</td>
-                  <td>${s.nombre}</td>
-                  <td>${s.grado}° ${s.seccion}</td>
-                  <td><strong>${s.pts}</strong></td>
-                </tr>`;
-              }).join("")}
-            </tbody>
-          </table>
-        </div>
-      `;
-    };
-
-    $("admin-ranking-container").innerHTML = `
-      <div class="ciclo-section">
-        <div class="ciclo-section-title">
-          <span class="badge-vi">Ciclo VI</span>
-          <h4>1ro y 2do de Secundaria</h4>
-          <span class="count-lbl">${cicloVI.length} estudiantes</span>
-        </div>
-        ${renderTablaRanking(cicloVI, "VI")}
-      </div>
-      <div class="ciclo-section">
-        <div class="ciclo-section-title">
-          <span class="badge-vii">Ciclo VII</span>
-          <h4>3ro, 4to y 5to de Secundaria</h4>
-          <span class="count-lbl">${cicloVII.length} estudiantes</span>
-        </div>
-        ${renderTablaRanking(cicloVII, "VII")}
-      </div>
-    `;
-  }
-
-  window.abrirPtsModal=(id,nombre)=>{
-    ptsTarget={id,nombre};
-    $("modal-pts-user").textContent=nombre;
-    $("modal-pts-val").value=""; $("modal-pts-motivo").value="";
-    $("modalPts").classList.add("open");
-  };
-  window.closePtsModal=()=>{$("modalPts").classList.remove("open");ptsTarget=null;};
-
-  window.confirmarPts = async () => {
-    const val=parseInt($("modal-pts-val").value)||0;
-    const motivo=$("modal-pts-motivo").value.trim()||"Puntos extra";
-    if(val<=0)return alert("Ingresa un valor mayor a 0.");
-    const snap=await getDoc(doc(db,"students",ptsTarget.id));
-    const s=snap.data();
-    await updateDoc(doc(db,"students",ptsTarget.id),{pts:(s.pts||0)+val});
-    await addDoc(collection(db,"students",ptsTarget.id,"history"),{
-      desc:motivo, pts:val, fecha:serverTimestamp(), tipo:"extra"
-    });
-    closePtsModal(); adminEstudiantes();
-  };
-</script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-  /* ── Reset & Base ── */
-  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0 }
-  body {
-    font-family:'Outfit',sans-serif;
-    background:#f0f4fb;
-    color:#1a1a2e;
-    min-height:100vh;
-  }
+body{font-family:Arial;margin:0;background:#1e3c72;color:white;text-align:center}
+.header{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px}
+.header img{width:60px}
+.container{background:white;color:black;margin:10px;padding:10px;border-radius:10px}
+table{width:100%;border-collapse:collapse}
+th{background:#2c3e50;color:white}
+td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
+.slot{cursor:pointer}
+.slot.seleccionado{background:#2ecc71;color:white}
+.slot.ocupado{color:white}
+.recreo{background:#f39c12;color:white}
+.admin{display:none}
+.fecha-dia{font-size:11px;font-weight:normal;opacity:0.85}
 
-  /* ── CSS Variables ── */
-  :root {
-    --navy:    #1B2D5B;
-    --navy2:   #253f80;
-    --gold:    #C9A227;
-    --gold2:   #e8be45;
-    --crimson: #8B1A1A;
-    --green:   #1f6b38;
-    --red:     #c0392b;
-    --border:  #d8e0ee;
-    --bg:      #f0f4fb;
-    --white:   #ffffff;
-    --text:    #1a1a2e;
-    --muted:   #6b7280;
-    --radius:  14px;
-    --shadow:  0 2px 12px rgba(27,45,91,0.10);
-    --shadow2: 0 4px 24px rgba(27,45,91,0.15);
-  }
-
-  /* ── Screens ── */
-  .screen { display:none }
-  .screen.active { display:block }
-
-  /* ════════════════════════════
-     HEADER INSTITUCIONAL
-  ════════════════════════════ */
-  .inst-header {
-    background: linear-gradient(135deg, var(--navy) 0%, #2a4494 100%);
-    color: white;
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    border-bottom: 3px solid var(--gold);
-  }
-  .inst-header .logo-wrap {
-    flex-shrink: 0;
-    width: 62px; height: 62px;
-    border-radius: 50%;
-    background: white;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
-    border: 2px solid var(--gold);
-    box-shadow: 0 0 0 3px rgba(201,162,39,0.3);
-  }
-  .inst-header .logo-wrap img {
-    width: 100%; height: 100%; object-fit: cover;
-  }
-  .inst-header .logo-wrap .logo-fallback {
-    font-size: 30px;
-  }
-  .inst-header .school-info { flex: 1 }
-  .inst-header .school-sub {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 1.5px;
-    color: var(--gold2);
-    text-transform: uppercase;
-    margin-bottom: 3px;
-  }
-  .inst-header .school-name {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(12px, 2.5vw, 17px);
-    font-weight: 700;
-    line-height: 1.25;
-    letter-spacing: 0.2px;
-  }
-  .inst-header .school-tag {
-    font-size: 11px;
-    color: rgba(255,255,255,0.65);
-    margin-top: 3px;
-  }
-
-  /* ── App Nav (secundaria) ── */
-  .app-nav {
-    background: var(--navy2);
-    display: flex; align-items: center;
-    justify-content: space-between;
-    padding: 0 20px; height: 48px;
-    color: white;
-  }
-  .app-nav.purple { background: #4a2070 }
-  .nav-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end }
-  .nav-user { font-size:11px; color:rgba(255,255,255,.75); max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-  .nav-pts {
-    background: var(--gold);
-    color: var(--navy);
-    font-size: 12px; font-weight: 800;
-    padding: 4px 12px; border-radius: 20px;
-  }
-  .btn-logout {
-    background: rgba(255,255,255,.15);
-    color: white; border: 1px solid rgba(255,255,255,.25);
-    font-size: 11px; padding: 5px 12px;
-    border-radius: 8px; cursor: pointer;
-    font-family: 'Outfit', sans-serif;
-    transition: background .15s;
-  }
-  .btn-logout:hover { background: rgba(255,255,255,.25) }
-
-  /* ════════════════════════════
-     LOGIN
-  ════════════════════════════ */
-  #loginScreen {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    background: linear-gradient(160deg, #f0f4fb 0%, #e8edf8 100%);
-  }
-  .login-inst-header {
-    background: linear-gradient(135deg, var(--navy) 0%, #2a4494 100%);
-    border-bottom: 3px solid var(--gold);
-    padding: 20px 24px;
-    display: flex; align-items: center; gap: 16px;
-    color: white;
-  }
-  .login-inst-header .logo-wrap {
-    width: 70px; height: 70px;
-    border-radius: 50%; background: white;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden; border: 2px solid var(--gold);
-    box-shadow: 0 0 0 4px rgba(201,162,39,0.25);
-    flex-shrink: 0;
-  }
-  .login-inst-header .logo-wrap img { width:100%; height:100%; object-fit:cover }
-  .login-inst-header .logo-fallback { font-size: 34px }
-  .login-inst-header .school-sub {
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 1.8px; color: var(--gold2);
-    text-transform: uppercase; margin-bottom: 4px;
-  }
-  .login-inst-header .school-name {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(13px, 3vw, 18px);
-    font-weight: 700; line-height: 1.25;
-  }
-  .login-inst-header .school-tag {
-    font-size: 11px; color: rgba(255,255,255,.6); margin-top: 3px;
-  }
-
-  .login-body {
-    flex: 1; display: flex; align-items: center;
-    justify-content: center; padding: 2rem 1rem;
-  }
-  .login-wrap { width: 100%; max-width: 420px }
-
-  .login-badge {
-    text-align: center; margin-bottom: 1.5rem;
-  }
-  .login-badge .badge-icon { font-size: 40px; margin-bottom: 8px }
-  .login-badge h2 {
-    font-family: 'Playfair Display', serif;
-    font-size: 22px; font-weight: 700; color: var(--navy);
-  }
-  .login-badge p { font-size: 13px; color: var(--muted); margin-top: 3px }
-
-  .card {
-    background: var(--white);
-    border-radius: 18px;
-    border: 1px solid var(--border);
-    padding: 1.75rem;
-    box-shadow: var(--shadow2);
-  }
-  .tabs-login { display:flex; gap:6px; margin-bottom:1.25rem }
-  .tab-btn {
-    flex:1; padding:9px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    background: #f4f6fb;
-    font-size: 13px; font-weight: 600;
-    cursor: pointer; color: var(--muted);
-    font-family: 'Outfit', sans-serif;
-    transition: all .15s;
-  }
-  .tab-btn.active { background: var(--navy); color: white; border-color: var(--navy) }
-
-  .form-group { margin-bottom: 14px }
-  .form-group label {
-    display: block; font-size: 12px; color: var(--muted);
-    margin-bottom: 5px; font-weight: 700; letter-spacing: 0.3px;
-  }
-  .form-group input, .form-group select {
-    width: 100%; padding: 10px 13px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px; font-size: 14px;
-    background: #fafbfd; color: var(--text);
-    outline: none; transition: border-color .15s;
-    font-family: 'Outfit', sans-serif;
-  }
-  .form-group input:focus, .form-group select:focus { border-color: var(--navy) }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
-  .btn-primary {
-    width: 100%; padding: 12px;
-    background: var(--navy); color: white;
-    border: none; border-radius: 10px;
-    font-size: 14px; font-weight: 700; cursor: pointer;
-    font-family: 'Outfit', sans-serif;
-    transition: background .15s;
-    letter-spacing: 0.3px;
-  }
-  .btn-primary:hover { background: var(--navy2) }
-  .msg {
-    font-size: 12px; padding: 9px 12px;
-    border-radius: 8px; margin-bottom: 12px; display: none;
-    font-weight: 600;
-  }
-  .msg.error { background: #fde8e8; color: #7a1f1f; display: block }
-  .msg.success { background: #e8f5ea; color: #1f5c29; display: block }
-  .link-small { text-align:center; font-size:12px; margin-top:10px; color:#999 }
-  .link-small a { color: var(--navy); cursor: pointer; text-decoration: underline }
-
-  /* ════════════════════════════
-     CONTENIDO COMÚN
-  ════════════════════════════ */
-  .content { padding: 1.25rem; max-width: 980px; margin: 0 auto }
-
-  /* ════════════════════════════
-     TABS ESTUDIANTE
-  ════════════════════════════ */
-  .stu-tabs, .admin-tabs {
-    display: flex; gap: 6px;
-    margin-bottom: 1.25rem;
-    overflow-x: auto; padding-bottom: 2px;
-  }
-  .stu-tab, .admin-tab {
-    padding: 8px 18px;
-    border: 1.5px solid var(--border);
-    border-radius: 22px; font-size: 13px; font-weight: 600;
-    cursor: pointer; background: white; color: var(--muted);
-    white-space: nowrap; transition: all .15s;
-    font-family: 'Outfit', sans-serif;
-  }
-  .stu-tab.active  { background: var(--navy);  color: white; border-color: var(--navy) }
-  .admin-tab.active { background: #4a2070; color: white; border-color: #4a2070 }
-  .stu-panel, .admin-panel { display: none }
-  .stu-panel.active, .admin-panel.active { display: block }
-
-  /* ════════════════════════════
-     INICIO DEL ESTUDIANTE
-  ════════════════════════════ */
-  .ciclo-banner {
-    background: linear-gradient(90deg, var(--navy) 0%, var(--navy2) 100%);
-    color: white; border-radius: 12px;
-    padding: 12px 18px; font-size: 13px; font-weight: 700;
-    margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;
-    letter-spacing: 0.3px;
-  }
-  .stats-grid {
-    display: grid; grid-template-columns: repeat(3, minmax(0,1fr));
-    gap: 10px; margin-bottom: 1.25rem;
-  }
-  .stat-card {
-    background: white; border: 1.5px solid var(--border);
-    border-radius: var(--radius); padding: 16px; text-align: center;
-    box-shadow: var(--shadow);
-  }
-  .stat-val { font-size: 28px; font-weight: 800; color: var(--navy) }
-  .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 600 }
-  .stat-card.gold { border-color: var(--gold) }
-  .stat-card.gold .stat-val { color: #8a6400 }
-
-  .section-card {
-    background: white; border: 1.5px solid var(--border);
-    border-radius: var(--radius); padding: 1.25rem;
-    margin-bottom: 1rem; box-shadow: var(--shadow);
-  }
-  .section-card h3 {
-    font-size: 14px; font-weight: 700; margin-bottom: 1rem;
-    color: var(--navy);
-  }
-  .prog-row { margin-bottom: 14px }
-  .prog-label {
-    display: flex; justify-content: space-between;
-    font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600;
-  }
-  .prog-bar {
-    height: 10px; background: #eef2f8;
-    border-radius: 5px; overflow: hidden;
-  }
-  .prog-fill {
-    height: 100%; border-radius: 5px; transition: width .5s ease;
-  }
-  .prog-fill.blue { background: linear-gradient(90deg, var(--navy) 0%, var(--navy2) 100%) }
-  .prog-fill.amber { background: linear-gradient(90deg, #d97706 0%, var(--gold) 100%) }
-
-  .pts-guide { background: #e8eef8; border-radius: var(--radius); padding: 1.25rem }
-  .pts-guide h3 { font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 10px }
-  .guide-row {
-    display: flex; justify-content: space-between;
-    font-size: 12px; padding: 7px 0;
-    border-bottom: 1px solid rgba(27,45,91,.1);
-  }
-  .guide-row:last-child { border-bottom: none }
-  .guide-row span:first-child { color: #0d3a6b }
-  .guide-row span:last-child { font-weight: 800; color: var(--navy) }
-
-  /* ════════════════════════════
-     TIENDA
-  ════════════════════════════ */
-  .store-open-banner {
-    background: linear-gradient(90deg, #e8f5ea, #d4edda);
-    color: #1a5c2a; font-weight: 700; font-size: 13px;
-    padding: 12px 16px; border-radius: 12px; margin-bottom: 1rem;
-    border: 1.5px solid #b8ddc0;
-  }
-  .store-closed {
-    text-align: center; padding: 3rem 1rem;
-    background: white; border: 1.5px solid var(--border);
-    border-radius: var(--radius); margin-bottom: 1rem;
-    box-shadow: var(--shadow);
-  }
-  .sc-icon { font-size: 52px; margin-bottom: 12px }
-  .sc-title { font-family:'Playfair Display',serif; font-size: 20px; font-weight: 700; color: var(--crimson); margin-bottom: 8px }
-  .sc-sub { font-size: 13px; color: var(--muted); max-width: 340px; margin: 0 auto; line-height: 1.7 }
-  .items-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 12px;
-  }
-  .item-card {
-    background: white; border: 1.5px solid var(--border);
-    border-radius: var(--radius); padding: 16px;
-    text-align: center; box-shadow: var(--shadow);
-    transition: transform .15s, box-shadow .15s;
-  }
-  .item-card:hover { transform: translateY(-2px); box-shadow: var(--shadow2) }
-  .item-card.can-afford { border-color: var(--green) }
-  .item-emoji { font-size: 38px; margin-bottom: 8px }
-  .item-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 4px }
-  .item-pts { font-size: 15px; color: #e65c00; font-weight: 800 }
-  .item-stock { font-size: 11px; color: var(--muted); margin-top: 3px }
-  .btn-canjear {
-    margin-top: 10px; width: 100%; padding: 8px;
-    border: none; border-radius: 8px; font-size: 12px; font-weight: 700;
-    cursor: pointer; background: var(--navy); color: white;
-    font-family: 'Outfit', sans-serif; transition: background .15s;
-  }
-  .btn-canjear:hover:not(:disabled) { background: var(--navy2) }
-  .btn-canjear:disabled { background: #eef2f8; color: #aaa; cursor: not-allowed }
-
-  /* ════════════════════════════
-     RANKING
-  ════════════════════════════ */
-  .ranking-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 12px;
-  }
-  .rank-ciclo-badge {
-    font-size: 13px; font-weight: 700;
-    background: var(--navy); color: white;
-    padding: 5px 16px; border-radius: 20px;
-  }
-  .rank-count { font-size: 12px; color: var(--muted); font-weight: 600 }
-  .rank-row {
-    background: white; border: 1.5px solid var(--border);
-    border-radius: 12px; padding: 12px 16px;
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 8px; box-shadow: var(--shadow);
-  }
-  .rank-row.rank-me { border-color: var(--gold); background: #fffdf0 }
-  .rank-pos { font-size: 18px; font-weight: 800; min-width: 38px; text-align: center }
-  .rank-info { flex: 1 }
-  .rank-name { font-size: 13px; font-weight: 700; color: var(--text) }
-  .rank-detail { font-size: 11px; color: var(--muted) }
-  .rank-pts { font-size: 15px; font-weight: 800; color: var(--navy) }
-  .rank-you { font-size: 11px; color: #b8860b; font-weight: 700 }
-
-  /* ════════════════════════════
-     HISTORIAL
-  ════════════════════════════ */
-  .hist-list { display: flex; flex-direction: column; gap: 8px }
-  .hist-item {
-    background: white; border: 1.5px solid var(--border);
-    border-radius: 10px; padding: 11px 14px;
-    display: flex; justify-content: space-between; align-items: center;
-    box-shadow: var(--shadow);
-  }
-  .hist-name { font-size: 13px; font-weight: 600 }
-  .hist-date { font-size: 11px; color: var(--muted); margin-top: 2px }
-  .hist-pts { font-size: 13px; font-weight: 800 }
-  .hist-pts.positive { color: var(--green) }
-  .hist-pts.negative { color: var(--crimson) }
-
-  /* ════════════════════════════
-     ADMIN
-  ════════════════════════════ */
-  .store-control {
-    background: white; border: 1.5px solid var(--border);
-    border-radius: var(--radius); padding: 1.25rem;
-    margin-bottom: 1.25rem;
-    display: flex; align-items: center;
-    justify-content: space-between; gap: 12px; flex-wrap: wrap;
-    box-shadow: var(--shadow);
-  }
-  .store-control-info h3 { font-size: 14px; font-weight: 700; margin-bottom: 5px; color: var(--navy) }
-  #store-status-lbl { font-size: 14px; font-weight: 800 }
-  .status-open  { color: var(--green) }
-  .status-closed { color: var(--crimson) }
-  .btn-store {
-    padding: 11px 24px; color: white; border: none;
-    border-radius: 10px; font-size: 13px; font-weight: 700;
-    cursor: pointer; font-family: 'Outfit', sans-serif;
-    transition: opacity .15s;
-  }
-  .btn-store:hover { opacity: .88 }
-  .btn-store.success { background: var(--green) }
-  .btn-store.danger  { background: var(--crimson) }
-
-  /* Ciclo sections */
-  .ciclo-section { margin-bottom: 1.5rem }
-  .ciclo-section-title { display:flex; align-items:center; gap:10px; margin-bottom:10px }
-  .ciclo-section-title h4 { font-size: 14px; font-weight: 700; color: var(--navy) }
-  .count-lbl { font-size: 12px; color: var(--muted); font-weight: 600 }
-  .badge-vi  { background:#e8f0fb; color:#0c447c; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:700 }
-  .badge-vii { background:#f0e8fb; color:#4c0c8a; font-size:11px; padding:3px 10px; border-radius:20px; font-weight:700 }
-
-  /* Tables */
-  .table-wrap {
-    overflow-x: auto; background: white;
-    border: 1.5px solid var(--border); border-radius: var(--radius);
-    box-shadow: var(--shadow);
-  }
-  table { width:100%; border-collapse:collapse; font-size:13px; min-width:400px }
-  th {
-    text-align:left; padding:11px 14px; font-size:11px;
-    color: var(--muted); font-weight:700; border-bottom:1px solid #eef2f8;
-    background:#f8fafd; letter-spacing:0.5px; text-transform:uppercase;
-  }
-  td { padding:10px 14px; border-bottom:1px solid #f0f4fa; color: var(--text) }
-  tr:last-child td { border-bottom:none }
-  tr:hover td { background: #fafbff }
-  .empty-td { text-align:center; color:#aaa; padding:1.5rem }
-  .code-chip {
-    background:#f0f4fa; padding:2px 8px; border-radius:5px;
-    font-size:12px; font-family:monospace;
-  }
-  .btn-pts {
-    padding:5px 12px; background: var(--navy); color:white;
-    border:none; border-radius:7px; font-size:12px; font-weight:700;
-    cursor:pointer; margin-right:4px; font-family:'Outfit',sans-serif;
-  }
-  /* NUEVO: Botón para quitar puntos */
-  .btn-quitar {
-    padding:5px 12px; background: #e67e22; color:white;
-    border:none; border-radius:7px; font-size:12px; font-weight:700;
-    cursor:pointer; margin-right:4px; font-family:'Outfit',sans-serif;
-  }
-  .btn-danger {
-    padding:5px 12px; background: var(--crimson); color:white;
-    border:none; border-radius:7px; font-size:12px; font-weight:700;
-    cursor:pointer; font-family:'Outfit',sans-serif;
-  }
-  .btn-add {
-    padding:9px 22px; background: var(--green); color:white;
-    border:none; border-radius:10px; font-size:13px; font-weight:700;
-    cursor:pointer; font-family:'Outfit',sans-serif; transition: opacity .15s;
-  }
-  .btn-add:hover { opacity:.88 }
-  .btn-calc {
-    padding:9px 22px; background: var(--navy); color:white;
-    border:none; border-radius:10px; font-size:13px; font-weight:700;
-    cursor:pointer; font-family:'Outfit',sans-serif; transition: opacity .15s;
-  }
-  .btn-calc:hover { opacity:.88 }
-
-  /* Khan form */
-  .khan-form {
-    background:white; border:1.5px solid var(--border);
-    border-radius:var(--radius); padding:1.25rem; margin-bottom:1rem;
-    box-shadow: var(--shadow);
-  }
-  .khan-form h3 { font-size:14px; font-weight:700; margin-bottom:1rem; color: var(--navy) }
-  .khan-preview {
-    background:#fffde8; border:1.5px solid #f5c518;
-    border-radius:10px; padding:12px 16px; font-size:13px;
-    margin-bottom:12px; display:none; line-height:2;
-  }
-  .admin-guide {
-    background:#fff9e6; border:1.5px solid #f5c518;
-    border-radius:var(--radius); padding:1.25rem; margin-bottom:1.25rem;
-  }
-  .admin-guide h3 { font-size:13px; font-weight:700; color:#7a5c00; margin-bottom:10px }
-  .section-title { font-size:15px; font-weight:800; margin-bottom:1rem; color: var(--navy) }
-
-  /* Premio form */
-  .premio-form {
-    background: white; border: 1.5px solid var(--border);
-    border-radius: var(--radius); padding: 1.25rem;
-    margin-bottom: 1.25rem; box-shadow: var(--shadow);
-  }
-  .premio-form p { font-size:13px; font-weight:700; margin-bottom:12px; color: var(--navy) }
-
-  /* ════════════════════════════
-     MODALES
-  ════════════════════════════ */
-  .modal-bg {
-    display: none; position: fixed; inset: 0; z-index: 1000;
-    background: rgba(0,0,0,.55); backdrop-filter: blur(3px);
-    align-items: center; justify-content: center; padding: 1rem;
-  }
-  .modal-bg.open { display: flex }
-  .modal {
-    background: white; border-radius: 18px; padding: 1.75rem;
-    width: 100%; max-width: 400px; box-shadow: 0 12px 48px rgba(0,0,0,.25);
-    animation: modal-in .2s ease;
-  }
-  @keyframes modal-in {
-    from { opacity:0; transform:scale(.95) translateY(8px) }
-    to   { opacity:1; transform:scale(1) translateY(0) }
-  }
-  .modal h3 { font-size:17px; font-weight:800; margin-bottom:.75rem; color: var(--navy) }
-  .modal-btns { display:flex; gap:10px; margin-top:1.25rem }
-  .btn-cancel {
-    flex:1; padding:10px; background:#f4f6fb;
-    border:1.5px solid var(--border); border-radius:10px;
-    font-size:13px; cursor:pointer; font-family:'Outfit',sans-serif;
-  }
-  .btn-confirm {
-    flex:1; padding:10px; background: var(--navy); color:white;
-    border:none; border-radius:10px; font-size:13px; font-weight:700;
-    cursor:pointer; font-family:'Outfit',sans-serif;
-  }
-
-  .empty {
-    text-align:center; padding:2.5rem; color:#aaa; font-size:13px;
-  }
-
-  /* ════════════════════════════
-     FOOTER
-  ════════════════════════════ */
-  .app-footer {
-    text-align: center; padding: 18px;
-    font-size: 11px; color: #bbb; border-top: 1px solid var(--border);
-    margin-top: 2rem; font-weight: 600; letter-spacing: 0.5px;
-  }
-
-  /* ── Responsive ── */
-  @media(max-width:480px){
-    .stats-grid { grid-template-columns: 1fr 1fr }
-    .form-row { grid-template-columns: 1fr }
-    .inst-header .school-name,
-    .login-inst-header .school-name { font-size: 12px }
-  }
+/* Grado y Sección en la misma fila */
+.fila-grado-seccion{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0}
+.fila-grado-seccion select{flex:1;min-width:130px;max-width:200px}
 </style>
 </head>
+
 <body>
 
-<!-- ════ LOGIN ════ -->
-<div id="loginScreen" class="screen active">
-  <div class="login-inst-header">
-    <div class="logo-wrap">
-      <img src="logo.jpeg" alt="Logo IE 0148" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-      <span class="logo-fallback" style="display:none">🏫</span>
-    </div>
-    <div>
-      <div class="school-sub">Institución Educativa N° 0148</div>
-      <div class="school-name">MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</div>
-      <div class="school-tag">San Juan de Lurigancho · Lima</div>
-    </div>
-  </div>
-
-  <div class="login-body">
-    <div class="login-wrap">
-      <div class="login-badge">
-        <div class="badge-icon">🛒</div>
-        <h2>La Tiendita AIP</h2>
-        <p>Sistema de puntos Khan Academy · Secundaria CNEB</p>
-      </div>
-      <div class="card">
-        <div class="tabs-login">
-          <button class="tab-btn active" onclick="setLoginTab('student')">Soy Estudiante</button>
-          <button class="tab-btn" onclick="setLoginTab('admin')">Administrador</button>
-        </div>
-        <div id="msgLogin" class="msg"></div>
-        <div id="loginStudent">
-          <div id="registerForm" style="display:none">
-            <div class="form-group">
-              <label>Nombre de usuario único (sin espacios)</label>
-              <input id="regUser" type="text" placeholder="ej: juan_perez o jperez_2vi" autocomplete="off"/>
-            </div>
-            <div class="form-group">
-              <label>Contraseña (mínimo 4 caracteres)</label>
-              <input id="regPass" type="password" placeholder="••••"/>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Grado</label>
-                <select id="regGrado">
-                  <option value="1ro">1ro — Ciclo VI</option>
-                  <option value="2do">2do — Ciclo VI</option>
-                  <option value="3ro">3ro — Ciclo VII</option>
-                  <option value="4to">4to — Ciclo VII</option>
-                  <option value="5to">5to — Ciclo VII</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Sección</label>
-                <select id="regSeccion">
-                  <option>A</option><option>B</option><option>C</option>
-                  <option>D</option><option>E</option><option>F</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Nombres y apellidos completos</label>
-              <input id="regNombre" type="text" placeholder="Escribe tu nombre real"/>
-            </div>
-            <button class="btn-primary" onclick="registrar()">Crear mi cuenta</button>
-            <p class="link-small">¿Ya tienes cuenta? <a onclick="toggleRegister(false)">Iniciar sesión</a></p>
-          </div>
-          <div id="loginForm">
-            <div class="form-group">
-              <label>Nombre de usuario</label>
-              <input id="loginUser" type="text" placeholder="Tu usuario" autocomplete="off"/>
-            </div>
-            <div class="form-group">
-              <label>Contraseña</label>
-              <input id="loginPass" type="password" placeholder="••••"/>
-            </div>
-            <button class="btn-primary" onclick="loginStudent()">Entrar a la Tiendita</button>
-            <p class="link-small">¿Primera vez? <a onclick="toggleRegister(true)">Crear cuenta aquí</a></p>
-          </div>
-        </div>
-        <div id="loginAdmin" style="display:none">
-          <div class="form-group">
-            <label>Contraseña de administrador</label>
-            <input id="adminPass" type="password" placeholder="Contraseña admin"/>
-          </div>
-          <button class="btn-primary" onclick="loginAdmin()">Acceder como Administrador</button>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="header">
+<img src="logo.jpeg">
+<div>
+<h3>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h3>
+<h4>AULA DE INNOVACIÓN PEDAGÓGICA</h4>
+</div>
 </div>
 
-<!-- ════ ESTUDIANTE ════ -->
-<div id="studentScreen" class="screen">
-  <div class="inst-header">
-    <div class="logo-wrap">
-      <img src="logo.jpeg" alt="Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-      <span class="logo-fallback" style="display:none">🏫</span>
-    </div>
-    <div class="school-info">
-      <div class="school-sub">IE N° 0148</div>
-      <div class="school-name">MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</div>
-      <div class="school-tag">La Tiendita AIP · Sistema de Puntos</div>
-    </div>
-  </div>
-  <div class="app-nav">
-    <span style="font-size:13px;font-weight:700">🛒 Tiendita AIP</span>
-    <div class="nav-right">
-      <span class="nav-user" id="navUser"></span>
-      <span class="nav-pts" id="navPts">0 pts</span>
-      <button class="btn-logout" onclick="logout()">Salir</button>
-    </div>
-  </div>
-  <div class="content">
-    <div class="stu-tabs">
-      <button class="stu-tab active" onclick="setStuTab('inicio')">📊 Inicio</button>
-      <button class="stu-tab" onclick="setStuTab('tienda')">🛍️ Tienda</button>
-      <button class="stu-tab" onclick="setStuTab('ranking')">🏆 Ranking</button>
-      <button class="stu-tab" onclick="setStuTab('historial')">📋 Historial</button>
-    </div>
+<div class="container">
 
-    <div id="stu-inicio" class="stu-panel active">
-      <div class="ciclo-banner">
-        <span style="font-size:18px">🎓</span>
-        <span id="stu-ciclo-badge">Ciclo VI</span>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-card gold">
-          <div class="stat-val" id="stu-pts-total">0</div>
-          <div class="stat-lbl">Puntos disponibles</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-val" id="prog-min-lbl" style="font-size:16px;padding-top:4px">0 min</div>
-          <div class="stat-lbl">Minutos esta semana</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-val" id="prog-ej-lbl" style="font-size:18px;padding-top:4px">0/4</div>
-          <div class="stat-lbl">Ejercicios ≥80%</div>
-        </div>
-      </div>
-      <div class="section-card">
-        <h3>Mi progreso semanal en Khan Academy</h3>
-        <div class="prog-row">
-          <div class="prog-label">
-            <span>Minutos activos (meta: 120 min)</span>
-            <span id="p-min-txt">0/120 min</span>
-          </div>
-          <div class="prog-bar"><div class="prog-fill blue" id="prog-min" style="width:0%"></div></div>
-        </div>
-        <div class="prog-row">
-          <div class="prog-label">
-            <span>Ejercicios aprobados con ≥80%</span>
-            <span id="p-ej-txt">0/4</span>
-          </div>
-          <div class="prog-bar"><div class="prog-fill amber" id="prog-ej" style="width:0%"></div></div>
-        </div>
-      </div>
-      <div class="pts-guide">
-        <h3>¿Cómo gano puntos cada semana?</h3>
-        <div class="guide-row"><span>Por cada 10 minutos en Khan Academy</span><span>+5 pts</span></div>
-        <div class="guide-row"><span>120 min en la semana = 12 bloques</span><span>+60 pts</span></div>
-        <div class="guide-row"><span>Por cada ejercicio resuelto con ≥80%</span><span>+5 pts</span></div>
-        <div class="guide-row"><span>Bonus: los 4 ejercicios ≥80% (todos completos)</span><span>+10 pts extra</span></div>
-        <div class="guide-row"><span>Máximo posible por semana</span><span>90 pts</span></div>
-        <div class="guide-row"><span>Canje: el profe abre la tienda al final del bimestre</span><span>🔓 1 vez/bimestre</span></div>
-      </div>
-    </div>
+<select id="semana">
+<option>Semana del 6 al 10 Abril</option>
+<option>Semana del 13 al 17 Abril</option>
+<option>Semana del 20 al 24 Abril</option>
+<option>Semana del 27 Abril al 1 Mayo</option>
+<option>Semana del 4 al 8 Mayo</option>
+</select>
 
-    <div id="stu-tienda" class="stu-panel">
-      <div id="store-banner"></div>
-      <div id="items-container" class="items-grid"></div>
-    </div>
+<br>
 
-    <div id="stu-ranking" class="stu-panel">
-      <div id="ranking-container"></div>
-    </div>
+<select id="docente">
+<option value="">Elige tu nombre</option>
+<option>REYNA TUESTA LUIS ENRIQUE</option>
+<option>CRUZ YCHO, BEATRIZ</option>
+<option>CARHUANCHO AVILES JANETH</option>
+<option>SALAS HUAYLLA, JORGE VICENTE</option>
+<option>CAMONES PULIDO, LEDGARDO</option>
+<option>PADILLA SANCHEZ, LORD ENRIQUE</option>
+<option>APAZA ROBLES ROBERTO JORGE</option>
+<option>JÁUREGUI SÁNCHEZ MANUEL</option>
+<option>VARILLAS ALANÍS, GENOVEVA</option>
+<option>LINDO CASTRO, JAVIER</option>
+<option>MAURICIO PERALES, BERNABE LUCIO</option>
+<option>ARUHUANCA CCOPA, HIPÓLITO</option>
+<option>DE LA CRUZ MARÍA</option>
+<option>MARTINEZ CARLOS</option>
+<option>VERA INGA MANUEL SALOMÓN</option>
+<option>MALAVER DIONICIO, ERIKA VERONICA</option>
+<option>CASTILLO ROMÁN MARÍA LIZZI</option>
+<option>RUA CARDENAS LISSET ROSALÍA</option>
+<option>TARRILLO TEJADA, FAUSTO</option>
+<option>ABANTO LEÓN IRMA</option>
+<option>HUAMAN YALICO, IRMA FAUSTINA</option>
+<option>MARTINEZ DURAND, ZOILA LILIANA</option>
+<option>JUMPA CAMPUZANO, SILVIA JACKELINE</option>
+<option>CHAVEZ MALAVER, CARMEN</option>
+<option>LLIUYALL CONDOR, ROSARIO</option>
+<option>WONG DELGADO, NIDIA ANGÉLICA</option>
+<option>VERA PALOMINO, RINA ESTHER</option>
+<option>CRISTOBAL, PATTY BELL</option>
+<option>GAMERO AGUILAR, CÉSAR AUGUSTO</option>
+<option>FLORES BERROCAL, MIGUEL ANGEL</option>
+<option>LUNA GUERRA, WALTER RAFAEL</option>
+<option>AZURIN SANTE, ELVIS</option>
+<option>CANDIA AGUILAR, MARCO ANTONIO</option>
+<option>CAPACITACIÓN - CYT</option>
+<option>CAPACITACIÓN - ARTE</option>
+<option>CAPACITACIÓN - DPCC</option>
+<option>CAPACITACIÓN - INGLÉS</option>
+<option>CAPACITACIÓN - RELIGIÓN</option>
+<option>CAPACITACIÓN - CCSS</option>
+<option>CAPACITACIÓN - EPT</option>
+<option>MANTENIMIENTO SEMANAL</option>
+</select>
 
-    <div id="stu-historial" class="stu-panel">
-      <div id="historial-container" class="hist-list"></div>
-    </div>
-  </div>
-  <div class="app-footer">IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE · AIP · Sistema Tiendita</div>
+<br>
+
+<!-- ✅ NUEVO: Grado y Sección en fila horizontal -->
+<div class="fila-grado-seccion">
+  <select id="grado">
+    <option value="">🎓 Grado</option>
+    <option>1° Grado</option>
+    <option>2° Grado</option>
+    <option>3° Grado</option>
+    <option>4° Grado</option>
+    <option>5° Grado</option>
+  </select>
+  <select id="seccion">
+    <option value="">🏷️ Sección</option>
+    <option>A</option>
+    <option>B</option>
+    <option>C</option>
+    <option>D</option>
+    <option>E</option>
+  </select>
 </div>
 
-<!-- ════ ADMIN ════ -->
-<div id="adminScreen" class="screen">
-  <div class="inst-header">
-    <div class="logo-wrap">
-      <img src="logo.jpeg" alt="Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-      <span class="logo-fallback" style="display:none">🏫</span>
-    </div>
-    <div class="school-info">
-      <div class="school-sub">IE N° 0148</div>
-      <div class="school-name">MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</div>
-      <div class="school-tag">Panel de Administración · AIP</div>
-    </div>
-  </div>
-  <div class="app-nav purple">
-    <span style="font-size:13px;font-weight:700">⚙️ Administrador AIP 0148</span>
-    <div class="nav-right">
-      <button class="btn-logout" onclick="logout()">Salir</button>
-    </div>
-  </div>
-  <div class="content">
-    <div class="store-control">
-      <div class="store-control-info">
-        <h3>Control de la Tiendita bimestral</h3>
-        <div id="store-status-lbl"><span class="status-closed">● CERRADA</span></div>
-        <div style="font-size:12px;color:var(--muted);margin-top:3px">
-          Abre al final del bimestre · Cierra cuando todos hayan canjeado
-        </div>
-      </div>
-      <button class="btn-store success" id="btn-store-toggle" onclick="toggleStore()">
-        🔓 Abrir tienda del bimestre
-      </button>
-    </div>
-    <div class="admin-tabs">
-      <button class="admin-tab active" onclick="setAdminTab('estudiantes')">👨‍🎓 Estudiantes</button>
-      <button class="admin-tab" onclick="setAdminTab('khan')">📚 Khan Academy</button>
-      <button class="admin-tab" onclick="setAdminTab('premios')">🎁 Premios</button>
-      <button class="admin-tab" onclick="setAdminTab('canjes')">📋 Canjes</button>
-      <!-- NUEVO: Pestaña Ranking -->
-      <button class="admin-tab" onclick="setAdminTab('ranking')">🏆 Ranking</button>
-    </div>
+<select id="tema">
+<option value="">📚 Elige el motivo</option>
+<option>Placement Test</option>
+<option>Khan Academy</option>
+<option>Office 365</option>
+<option>Canva Educativo</option>
+<option>Sesión de aprendizaje</option>
+<option>Robótica / Scratch</option>
+<option>Seguridad Digital</option>
+<option>Formularios Google</option>
+<option>Presentaciones Digitales</option>
+<option>Edición de Video</option>
+<option>Otro</option>
+</select>
 
-    <!-- TAB: Estudiantes -->
-    <div id="admin-estudiantes" class="admin-panel active">
-      <div class="ciclo-section">
-        <div class="ciclo-section-title">
-          <span class="badge-vi">Ciclo VI</span>
-          <h4>1ro y 2do de Secundaria</h4>
-          <span class="count-lbl" id="count-vi"></span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Usuario</th><th>Nombre completo</th><th>Grado / Sección</th><th>Puntos</th><th>Acciones</th></tr></thead>
-            <tbody id="tbody-vi"></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="ciclo-section">
-        <div class="ciclo-section-title">
-          <span class="badge-vii">Ciclo VII</span>
-          <h4>3ro, 4to y 5to de Secundaria</h4>
-          <span class="count-lbl" id="count-vii"></span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Usuario</th><th>Nombre completo</th><th>Grado / Sección</th><th>Puntos</th><th>Acciones</th></tr></thead>
-            <tbody id="tbody-vii"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+<button onclick="imprimirHorario()">🖨️ Imprimir Horario</button>
 
-    <!-- TAB: Khan Academy -->
-    <div id="admin-khan" class="admin-panel">
-      <div class="admin-guide">
-        <h3>📊 Tabla de puntos semanal — Khan Academy</h3>
-        <div class="guide-row"><span>Por cada 10 minutos activos en Khan Academy</span><span>+5 pts</span></div>
-        <div class="guide-row"><span>Por cada ejercicio individual con ≥80% correcto</span><span>+5 pts</span></div>
-        <div class="guide-row"><span>Bonus: los 4 ejercicios aprobados (todos ≥80%)</span><span>+10 pts</span></div>
-        <div class="guide-row"><span>Máximo semanal (120 min + 4 ejerc. + bonus)</span><span>90 pts</span></div>
-        <div class="guide-row"><span>Ejemplo: 100 min + 4 ejerc. ≥80%</span><span>50 + 20 + 10 = 80 pts</span></div>
-        <div class="guide-row"><span>Ejemplo: 120 min + 3 ejerc. ≥80%</span><span>60 + 15 = 75 pts</span></div>
-      </div>
-      <div class="khan-form">
-        <h3>Registrar puntos semanales de un estudiante</h3>
-        <div class="form-group">
-          <label>Estudiante</label>
-          <select id="khan-student"></select>
-        </div>
-        <div class="form-group">
-          <label>Referencia de semana</label>
-          <input id="khan-semana" type="text" placeholder="ej: Semana 1 — Abril 2025"/>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Minutos en Khan Academy</label>
-            <input id="khan-minutos" type="number" min="0" placeholder="ej: 120"/>
-          </div>
-          <div class="form-group">
-            <label>Ejercicios con ≥80% (0 a 4)</label>
-            <input id="khan-ejercicios" type="number" min="0" max="4" placeholder="ej: 4"/>
-          </div>
-        </div>
-        <div class="khan-preview" id="khan-preview">
-          <div id="khan-desglose"></div>
-        </div>
-        <button class="btn-calc" onclick="calcularKhan()" style="margin-right:8px">Calcular puntos</button>
-        <button class="btn-add" onclick="asignarKhan()">Asignar puntos</button>
-      </div>
-    </div>
+<div id="horarios"></div>
 
-    <!-- TAB: Premios -->
-    <div id="admin-premios" class="admin-panel">
-      <p class="section-title">Premios de la tienda</p>
-      <div class="premio-form">
-        <p>Agregar nuevo premio</p>
-        <div class="form-row">
-          <div class="form-group"><label>Nombre del premio</label><input id="premio-nombre" type="text" placeholder="ej: Lápices de colores x12"/></div>
-          <div class="form-group"><label>Emoji</label><input id="premio-emoji" type="text" placeholder="🎨" maxlength="2"/></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Puntos requeridos</label><input id="premio-puntos" type="number" min="1" placeholder="ej: 80"/></div>
-          <div class="form-group"><label>Stock (99 = ilimitado)</label><input id="premio-stock" type="number" min="0" placeholder="ej: 10"/></div>
-        </div>
-        <button class="btn-add" onclick="agregarPremio()">Agregar premio</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Premio</th><th>Puntos</th><th>Stock</th><th>Acción</th></tr></thead>
-          <tbody id="tbody-premios"></tbody>
-        </table>
-      </div>
-    </div>
+<button onclick="reservar()">Reservar</button>
+<button onclick="activarAdmin()">🔐 Admin</button>
 
-    <!-- TAB: Canjes -->
-    <div id="admin-canjes" class="admin-panel">
-      <p class="section-title">Historial de canjes realizados</p>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Estudiante</th><th>Grado/Secc.</th><th>Ciclo</th><th>Premio</th><th>Puntos</th><th>Fecha</th></tr></thead>
-          <tbody id="tbody-canjes"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- NUEVO: TAB Ranking Admin -->
-    <div id="admin-ranking" class="admin-panel">
-      <p class="section-title">Ranking general por ciclos</p>
-      <div id="admin-ranking-container"></div>
-    </div>
-  </div>
-  <div class="app-footer">IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE · Panel de Administración</div>
 </div>
 
-<!-- MODAL CANJE -->
-<div class="modal-bg" id="modalCanje">
-  <div class="modal">
-    <h3 id="modal-title">Confirmar canje</h3>
-    <p id="modal-body" style="font-size:13px;color:var(--muted)"></p>
-    <p style="font-size:12px;color:#aaa;margin-top:6px">Los canjes son definitivos y no se pueden revertir.</p>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="btn-confirm" onclick="confirmarCanje()">Sí, canjear</button>
-    </div>
-  </div>
+<div class="container admin" id="adminPanel">
+
+<h3>Registro por Semana</h3>
+
+<button onclick="exportarExcel()">📄 Excel</button>
+
+<table>
+<thead>
+<tr>
+<th>Semana</th>
+<th>Horario</th>
+<th>Docente</th>
+<th>Grado</th>
+<th>Sección</th>
+<th>Tema</th>
+<th>Asistencia</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody id="tabla"></tbody>
+</table>
+
+<h3>Estadística</h3>
+<canvas id="grafico"></canvas>
+
 </div>
 
-<!-- MODAL PUNTOS EXTRA -->
-<div class="modal-bg" id="modalPts">
-  <div class="modal">
-    <h3>Agregar puntos extra</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">
-      Estudiante: <strong id="modal-pts-user"></strong>
-    </p>
-    <div class="form-group">
-      <label>Cantidad de puntos</label>
-      <input id="modal-pts-val" type="number" min="1" placeholder="ej: 10"/>
-    </div>
-    <div class="form-group">
-      <label>Motivo</label>
-      <input id="modal-pts-motivo" type="text" placeholder="ej: Participación, tarea extra, comportamiento..."/>
-    </div>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="closePtsModal()">Cancelar</button>
-      <button class="btn-confirm" onclick="confirmarPts()">Agregar puntos</button>
-    </div>
-  </div>
-</div>
+<script>
 
-<!-- NUEVO: MODAL QUITAR PUNTOS -->
-<div class="modal-bg" id="modalQuitarPts">
-  <div class="modal">
-    <h3>Quitar puntos</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:12px">
-      Estudiante: <strong id="modal-quitar-pts-user"></strong>
-    </p>
-    <div class="form-group">
-      <label>Cantidad de puntos a quitar</label>
-      <input id="modal-quitar-pts-val" type="number" min="1" placeholder="ej: 5"/>
-    </div>
-    <div class="form-group">
-      <label>Motivo</label>
-      <input id="modal-quitar-pts-motivo" type="text" placeholder="ej: Sanción, error en registro..."/>
-    </div>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeQuitarPtsModal()">Cancelar</button>
-      <button class="btn-confirm" onclick="confirmarQuitarPts()">Quitar puntos</button>
-    </div>
-  </div>
-</div>
+// FECHAS DE INICIO (Lunes) POR SEMANA
+const fechasInicioSemana = {
+  "Semana del 6 al 10 Abril":       new Date(2025, 3, 6),
+  "Semana del 13 al 17 Abril":      new Date(2025, 3, 13),
+  "Semana del 20 al 24 Abril":      new Date(2025, 3, 20),
+  "Semana del 27 Abril al 1 Mayo":  new Date(2025, 3, 27),
+  "Semana del 4 al 8 Mayo":         new Date(2025, 4, 4),
+};
 
+const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+function obtenerFechasDias(semana) {
+  const inicio = fechasInicioSemana[semana];
+  if (!inicio) return ["Lunes","Martes","Miércoles","Jueves","Viernes"];
+  const nombres = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
+  return nombres.map((dia, i) => {
+    const fecha = new Date(inicio);
+    fecha.setDate(inicio.getDate() + i);
+    return { nombre: dia, dia: fecha.getDate(), mes: meses[fecha.getMonth()] };
+  });
+}
+
+function obtenerColor(nombre){
+let hash=0;
+for(let i=0;i<nombre.length;i++){
+hash = nombre.charCodeAt(i) + ((hash<<5)-hash);
+}
+let color="#";
+for(let i=0;i<3;i++){
+let value=(hash>>(i*8))&255;
+color+=("00"+value.toString(16)).slice(-2);
+}
+return color;
+}
+
+// FIREBASE
+const firebaseConfig={
+apiKey:"A...",
+authDomain:"ingreso-al-aip---2026.firebaseapp.com",
+databaseURL:"https://ingreso-al-aip---2026-default-rtdb.firebaseio.com",
+projectId:"ingreso-al-aip---2026"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+
+const dias=["Lunes","Martes","Miércoles","Jueves","Viernes"];
+const horas=["1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00","RECREO","4:20-5:05","5:05-5:50","5:50-6:35"];
+
+let seleccionados=[];
+
+// HORARIO
+function crearHorario(){
+const semana = document.getElementById("semana").value;
+const diasConFecha = obtenerFechasDias(semana);
+
+const cont=document.getElementById("horarios");
+cont.innerHTML="";
+const tabla=document.createElement("table");
+
+let header="<tr><th>Hora</th>";
+diasConFecha.forEach(d => {
+  if (typeof d === "object") {
+    header += `<th>${d.nombre}<br><span class="fecha-dia">${d.dia} ${d.mes}</span></th>`;
+  } else {
+    header += `<th>${d}</th>`;
+  }
+});
+header+="</tr>";
+tabla.innerHTML=header;
+
+horas.forEach(h=>{
+if(h==="RECREO"){
+tabla.innerHTML+=`<tr><td colspan="6" class="recreo">RECREO</td></tr>`;
+return;
+}
+let fila=`<tr><td>${h}</td>`;
+dias.forEach(d=>{
+let id=d+" "+h;
+fila+=`<td class="slot" data-id="${id}">Disponible</td>`;
+});
+fila+="</tr>";
+tabla.innerHTML+=fila;
+});
+
+cont.appendChild(tabla);
+
+document.querySelectorAll(".slot").forEach(c=>{
+c.onclick=()=>{
+if(c.classList.contains("ocupado")) return;
+const id=c.dataset.id;
+if(seleccionados.includes(id)){
+seleccionados=seleccionados.filter(x=>x!==id);
+c.classList.remove("seleccionado");
+return;
+}
+seleccionados.push(id);
+c.classList.add("seleccionado");
+};
+});
+}
+
+// SEMANAS SIN BOLETA PDF
+const semanasSinBoleta = [
+  "Semana del 20 al 24 Abril",
+  "Semana del 27 Abril al 1 Mayo",
+  "Semana del 4 al 8 Mayo"
+];
+
+// RESERVAR
+function reservar(){
+const docente=document.getElementById("docente").value;
+const semana=document.getElementById("semana").value;
+const tema=document.getElementById("tema").value;
+const grado=document.getElementById("grado").value;       // ✅ NUEVO
+const seccion=document.getElementById("seccion").value;   // ✅ NUEVO
+
+if(!docente)return alert("Seleccione docente");
+if(!grado)return alert("Seleccione el grado");           // ✅ NUEVO
+if(!seccion)return alert("Seleccione la sección");       // ✅ NUEVO
+if(!tema)return alert("Seleccione el tema de la sesión");
+if(seleccionados.length===0)return alert("Seleccione horario");
+
+const fecha=new Date().toLocaleString();
+
+seleccionados.forEach(id=>{
+db.ref("reservas/"+semana+"/"+id).set({
+nombre:docente,
+grado:grado,        // ✅ NUEVO
+seccion:seccion,    // ✅ NUEVO
+tema:tema,
+asistio:false,
+fecha:fecha
+});
+});
+
+// Verificar si esta semana genera boleta
+if(semanasSinBoleta.includes(semana)){
+  seleccionados=[];
+  document.querySelectorAll(".slot").forEach(x=>x.classList.remove("seleccionado"));
+  cargar();
+  return;
+}
+
+// QR y BOLETA PDF
+const baseURL = window.location.origin + window.location.pathname;
+const textoQR = baseURL + "?scan=" + encodeURIComponent(
+  semana + "||" + seleccionados.join(",")
+);
+
+const { jsPDF } = window.jspdf;
+
+QRCode.toDataURL(textoQR,function(err,url){
+const doc=new jsPDF();
+
+doc.text("BOLETA AIP",20,20);
+doc.text("Docente: "+docente,20,40);
+doc.text("Grado: "+grado+"  Sección: "+seccion,20,50);  // ✅ NUEVO
+
+let y=60;
+seleccionados.forEach(h=>{
+doc.text("- "+h,20,y);
+y+=10;
+});
+
+doc.addImage(url,"PNG",20,y+10,50,50);
+doc.save("boleta.pdf");
+});
+
+seleccionados=[];
+document.querySelectorAll(".slot").forEach(x=>x.classList.remove("seleccionado"));
+cargar();
+}
+
+// QR
+function detectarQR(){
+const params=new URLSearchParams(window.location.search);
+const data=params.get("scan");
+if(!data)return;
+const [semana,horarios]=data.split("||");
+const lista=horarios.split(",");
+lista.forEach(h=>{
+db.ref("reservas/"+semana+"/"+h+"/asistio").set(true);
+});
+alert("Asistencia registrada");
+window.location.href=window.location.pathname;
+}
+
+// CARGAR
+function cargar(){
+const semana=document.getElementById("semana").value;
+
+document.querySelectorAll(".slot").forEach(s=>{
+s.classList.remove("ocupado");
+s.style.background="";
+s.textContent="Disponible";
+});
+
+db.ref("reservas/"+semana).once("value",snap=>{
+snap.forEach(child=>{
+document.querySelectorAll(".slot").forEach(s=>{
+if(s.dataset.id===child.key){
+const nombre=child.val().nombre;
+const tema=child.val().tema||"";
+const grado=child.val().grado||"";      // ✅ NUEVO
+const seccion=child.val().seccion||"";  // ✅ NUEVO
+const color=obtenerColor(nombre);
+
+s.classList.add("ocupado");
+s.style.background=color;
+s.style.color="white";
+
+// ✅ Muestra grado y sección en el slot si están disponibles
+const gradoSeccionTag = (grado || seccion)
+  ? `<br><span style="font-size:10px;opacity:0.9">🎓 ${grado} ${seccion}</span>`
+  : "";
+
+s.innerHTML=`<b>${nombre}</b>${gradoSeccionTag}${tema ? `<br><span style="font-size:10px;opacity:0.9">📚 ${tema}</span>` : ""}`;
+}
+});
+});
+});
+
+cargarAdmin();
+cargarGrafico();
+}
+
+// ADMIN
+function activarAdmin(){
+if(prompt("Clave")=="yarvin2026"){
+document.getElementById("adminPanel").style.display="block";
+cargarAdmin();
+cargarGrafico();
+}
+}
+
+function cargarAdmin(){
+const semana=document.getElementById("semana").value;
+const tabla=document.getElementById("tabla");
+tabla.innerHTML="";
+
+db.ref("reservas/"+semana).once("value",snap=>{
+snap.forEach(h=>{
+tabla.innerHTML+=`
+<tr>
+<td>${semana}</td>
+<td>${h.key}</td>
+<td>${h.val().nombre}</td>
+<td>${h.val().grado||"-"}</td>
+<td>${h.val().seccion||"-"}</td>
+<td>${h.val().tema||"-"}</td>
+<td>${h.val().asistio?"🟢":"🔴"}</td>
+<td>
+<button onclick="asistio('${semana}','${h.key}')">✔</button>
+<button onclick="eliminar('${semana}','${h.key}')">🗑</button>
+</td>
+</tr>`;
+});
+});
+}
+
+// GRAFICO
+function cargarGrafico(){
+const semana=document.getElementById("semana").value;
+db.ref("reservas/"+semana).once("value",snap=>{
+let total=0,asis=0;
+snap.forEach(h=>{
+total++;
+if(h.val().asistio)asis++;
+});
+new Chart(document.getElementById("grafico"),{
+type:"doughnut",
+data:{
+labels:["Asistió","Faltó"],
+datasets:[{data:[asis,total-asis]}]
+}
+});
+});
+}
+
+function asistio(s,h){
+db.ref("reservas/"+s+"/"+h+"/asistio").set(true);
+cargar();
+}
+
+function eliminar(s,h){
+db.ref("reservas/"+s+"/"+h).remove();
+cargar();
+}
+
+// EXCEL
+function exportarExcel(){
+const semana=document.getElementById("semana").value;
+db.ref("reservas/"+semana).once("value",snap=>{
+
+let csv="Semana,Horario,Docente,Grado,Sección,Tema,Asistencia\n";  // ✅ NUEVO
+
+snap.forEach(h=>{
+csv+=`${semana},${h.key},${h.val().nombre},${h.val().grado||"-"},${h.val().seccion||"-"},${h.val().tema||"-"},${h.val().asistio?"SI":"NO"}\n`;  // ✅ NUEVO
+});
+
+let blob=new Blob([csv]);
+let a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="asistencia_"+semana+".csv";
+a.click();
+});
+}
+
+document.getElementById("semana").addEventListener("change",()=>{
+  crearHorario();
+  cargar();
+});
+
+crearHorario();
+cargar();
+detectarQR();
+
+</script>
+<script>
+function imprimirHorario() {
+    const contenido = document.getElementById("horarios");
+    if (!contenido) {
+        alert("No se encontró el horario");
+        return;
+    }
+    const ventana = window.open('', '_blank');
+    ventana.document.open();
+    ventana.document.write(`
+        <html>
+        <head>
+            <title>Horario AIP</title>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 20px; }
+                table { border-collapse: collapse; width: 100%; }
+                th, td {
+                    border: 1px solid black;
+                    padding: 8px;
+                    text-align: center;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+                .fecha-dia { font-size: 11px; font-weight: normal; opacity: 0.85; }
+                @media print {
+                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                }
+            </style>
+        </head>
+        <body>
+            <h2>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h2>
+            <h3>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h3>
+            <h4>${document.getElementById("semana").value}</h4>
+            ${contenido.outerHTML}
+            <p><b>PIP: YARVIN RS</b></p>
+        </body>
+        </html>
+    `);
+    ventana.document.close();
+    ventana.onload = function () {
+        ventana.focus();
+        ventana.print();
+    };
+}
+</script>
 </body>
 </html>
