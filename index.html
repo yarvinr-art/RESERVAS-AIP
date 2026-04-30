@@ -51,6 +51,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <option>Semana del 20 al 24 Abril</option>
 <option>Semana del 27 Abril al 1 Mayo</option>
 <option>Semana del 4 al 8 Mayo</option>
+<option>Semana del 11 al 15 Mayo</option>
 </select>
 
 <br>
@@ -103,7 +104,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <br>
 
 <!-- ✅ NUEVO: Grado y Sección en fila horizontal -->
-<div class="fila-grado-seccion">
+<div class="fila-grado-seccion" id="filaGradoSeccion">
   <select id="grado">
     <option value="">🎓 Grado</option>
     <option>1° Grado</option>
@@ -111,6 +112,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
     <option>3° Grado</option>
     <option>4° Grado</option>
     <option>5° Grado</option>
+    <option>Rezagados</option>
   </select>
   <select id="seccion">
     <option value="">🏷️ Sección</option>
@@ -119,6 +121,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
     <option>C</option>
     <option>D</option>
     <option>E</option>
+    <option>Todos</option>
   </select>
 </div>
 
@@ -182,6 +185,7 @@ const fechasInicioSemana = {
   "Semana del 20 al 24 Abril":      new Date(2025, 3, 20),
   "Semana del 27 Abril al 1 Mayo":  new Date(2025, 3, 27),
   "Semana del 4 al 8 Mayo":         new Date(2025, 4, 4),
+  "Semana del 11 al 15 Mayo":       new Date(2025, 4, 11),
 };
 
 const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -281,7 +285,8 @@ c.classList.add("seleccionado");
 const semanasSinBoleta = [
   "Semana del 20 al 24 Abril",
   "Semana del 27 Abril al 1 Mayo",
-  "Semana del 4 al 8 Mayo"
+  "Semana del 4 al 8 Mayo",
+  "Semana del 11 al 15 Mayo"
 ];
 
 // RESERVAR
@@ -289,12 +294,13 @@ function reservar(){
 const docente=document.getElementById("docente").value;
 const semana=document.getElementById("semana").value;
 const tema=document.getElementById("tema").value;
-const grado=document.getElementById("grado").value;       // ✅ NUEVO
-const seccion=document.getElementById("seccion").value;   // ✅ NUEVO
+const esMantenimiento = docente === "MANTENIMIENTO SEMANAL";
+const grado=esMantenimiento ? "PIP" : document.getElementById("grado").value;
+const seccion=esMantenimiento ? "(YARVIN RS)" : document.getElementById("seccion").value;
 
 if(!docente)return alert("Seleccione docente");
-if(!grado)return alert("Seleccione el grado");           // ✅ NUEVO
-if(!seccion)return alert("Seleccione la sección");       // ✅ NUEVO
+if(!esMantenimiento && !grado)return alert("Seleccione el grado");
+if(!esMantenimiento && !seccion)return alert("Seleccione la sección");
 if(!tema)return alert("Seleccione el tema de la sesión");
 if(seleccionados.length===0)return alert("Seleccione horario");
 
@@ -487,6 +493,17 @@ a.click();
 document.getElementById("semana").addEventListener("change",()=>{
   crearHorario();
   cargar();
+});
+
+// Lógica MANTENIMIENTO SEMANAL: oculta grado/sección, muestra PIP como responsable
+document.getElementById("docente").addEventListener("change", function() {
+  const esMantenimiento = this.value === "MANTENIMIENTO SEMANAL";
+  const filaGS = document.getElementById("filaGradoSeccion");
+  filaGS.style.display = esMantenimiento ? "none" : "flex";
+  if (esMantenimiento) {
+    document.getElementById("grado").value = "";
+    document.getElementById("seccion").value = "";
+  }
 });
 
 crearHorario();
