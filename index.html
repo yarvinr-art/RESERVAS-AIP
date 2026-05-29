@@ -208,7 +208,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <option>Otro</option>
 </select>
 
-<button onclick="imprimirHorario()">🖨️ Imprimir Horario</button>
+<button onclick="imprimirHorario()">🖨️ Imprimir Horario AIP</button>
 
 <div id="horarios"></div>
 
@@ -262,9 +262,17 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
     </select>
   </div>
 
+  <!-- Campo de mensaje/observaciones -->
+  <div style="margin:8px 0;text-align:left">
+    <label style="font-size:12px;opacity:0.9">📝 Mensaje / Observaciones:</label><br>
+    <textarea id="re-mensaje" rows="3" placeholder="Escribe aquí un mensaje u observación para el documento impreso..."
+      style="width:97%;margin-top:4px;padding:6px;border-radius:6px;border:1px solid #d4aaff;background:#3a006a;color:white;font-size:12px;resize:vertical"></textarea>
+  </div>
+
   <div id="re-estado" style="font-size:12px;min-height:20px;margin:4px 0"></div>
 
   <button onclick="reRegistrar()">✅ Registrar Refuerzo</button>
+  <button onclick="imprimirRefuerzo()" style="background:#f0d0ff;color:#3a006a;font-weight:bold;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;margin-left:6px">🖨️ Imprimir Refuerzo</button>
 
   <div id="re-lista-wrap" style="overflow-x:auto;margin-top:10px;display:none">
     <table class="refuerzo-registros" id="re-lista">
@@ -734,87 +742,128 @@ document.getElementById("re-semana").addEventListener("change", reActualizarDias
 function imprimirHorario() {
     const contenido = document.getElementById("horarios");
     if (!contenido) { alert("No se encontró el horario"); return; }
-
     const semana = document.getElementById("semana").value;
+    const ventana = window.open('', '_blank');
+    ventana.document.open();
+    ventana.document.write(`
+        <html>
+        <head>
+            <title>Horario AIP</title>
+            <style>
+                body { font-family: Arial; text-align: center; padding: 20px; }
+                table { border-collapse: collapse; width: 100%; }
+                th, td { border: 1px solid black; padding: 8px; text-align: center;
+                    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                .fecha-dia { font-size: 11px; font-weight: normal; opacity: 0.85; }
+                @media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+            </style>
+        </head>
+        <body>
+            <h2>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h2>
+            <h3>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h3>
+            <h4>${semana}</h4>
+            ${contenido.outerHTML}
+            <p><b>PIP: YARVIN RAMOS SOTO</b></p>
+        </body>
+        </html>
+    `);
+    ventana.document.close();
+    ventana.onload = function () { ventana.focus(); ventana.print(); };
+}
 
-    // Cargar registros de Refuerzo Escolar desde Firebase antes de imprimir
+function imprimirRefuerzo() {
+    const semana = document.getElementById("re-semana").value || "—";
+    const mensaje = document.getElementById("re-mensaje").value.trim();
+
     db.ref("refuerzoEscolar/" + semana).once("value", snap => {
-        let filasRefuerzo = "";
+        let filas = "";
+        let num = 1;
         if (snap.exists()) {
             snap.forEach(child => {
                 const v = child.val();
-                filasRefuerzo += `<tr>
+                filas += `<tr>
+                    <td>${num++}</td>
                     <td>${v.diaFecha || v.dia}</td>
                     <td>${v.grado}</td>
                     <td>${v.seccion}</td>
-                    <td>${v.area || "Cultura Digital"}</td>
-                    <td>${v.hora || "6:35-7:15"}</td>
-                    <td>${v.responsable || "PIP"}</td>
+                    <td>${v.hora || "6:35 – 7:15"}</td>
                 </tr>`;
             });
+        } else {
+            filas = `<tr><td colspan="5" style="color:#999;font-style:italic;text-align:center">Sin registros para esta semana</td></tr>`;
         }
-
-        const refuerzoHTML = `
-        <div style="margin-top:30px; page-break-inside:avoid;">
-            <div style="background:#8e44ad;color:white;padding:8px 12px;border-radius:8px 8px 0 0;text-align:left;">
-                <strong style="font-size:14px">📚 REFUERZO ESCOLAR</strong>
-                &nbsp;&nbsp;
-                <span style="font-size:11px;opacity:0.9">💻 Cultura Digital &nbsp;|&nbsp; 🧑‍🏫 Prof. de Innovación Pedagógica &nbsp;|&nbsp; 🕖 6:35 – 7:15 p.m.</span>
-            </div>
-            <table style="width:100%;border-collapse:collapse;border:2px solid #8e44ad;">
-                <thead>
-                    <tr style="background:#f3e5f5;">
-                        <th>Día / Fecha</th>
-                        <th>Grado</th>
-                        <th>Sección</th>
-                        <th>Área</th>
-                        <th>Hora</th>
-                        <th>Responsable</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${filasRefuerzo || '<tr><td colspan="6" style="color:#999;font-style:italic">Sin registros para esta semana</td></tr>'}
-                </tbody>
-            </table>
-        </div>`;
 
         const ventana = window.open('', '_blank');
         ventana.document.open();
         ventana.document.write(`
-            <html>
-            <head>
-                <title>Horario AIP</title>
-                <style>
-                    body { font-family: Arial; text-align: center; padding: 20px; }
-                    table { border-collapse: collapse; width: 100%; }
-                    th, td {
-                        border: 1px solid black;
-                        padding: 8px;
-                        text-align: center;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                    }
-                    .fecha-dia { font-size: 11px; font-weight: normal; opacity: 0.85; }
-                    @media print {
-                        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                    }
-                </style>
-            </head>
-            <body>
-                <h2>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h2>
-                <h3>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h3>
-                <h4>${semana}</h4>
-                ${contenido.outerHTML}
-                <p><b>PIP: YARVIN RS</b></p>
-                ${refuerzoHTML}
-            </body>
-            </html>
-        `);
+        <html>
+        <head>
+            <title>Refuerzo Escolar</title>
+            <style>
+                body { font-family: Arial; margin: 30px 40px; color: #222; }
+                h2 { text-align:center; font-size:15px; margin:2px 0; }
+                h3 { text-align:center; font-size:13px; margin:2px 0; color:#555; }
+                .titulo-doc { text-align:center; margin:18px 0 6px 0; }
+                .titulo-doc h1 { font-size:17px; color:#6a0dad; letter-spacing:1px; margin:0; }
+                .subtitulo { text-align:center; font-size:12px; color:#555; margin-bottom:4px; }
+                .badge { display:inline-block; background:#8e44ad; color:white; border-radius:20px; padding:3px 14px; font-size:12px; margin-bottom:14px; }
+                table { width:100%; border-collapse:collapse; margin-top:10px; }
+                th { background:#8e44ad; color:white; padding:7px; font-size:12px; }
+                td { border:1px solid #ccc; padding:7px; font-size:12px; text-align:center; }
+                .mensaje-box { border:1px solid #ccc; border-radius:6px; padding:10px 14px; margin:16px 0; font-size:12px; min-height:40px; background:#faf5ff; }
+                .firmas { display:flex; justify-content:space-around; margin-top:50px; text-align:center; }
+                .firma-bloque { width:220px; }
+                .firma-linea { border-top:1px solid #333; margin-bottom:6px; }
+                .firma-nombre { font-weight:bold; font-size:12px; }
+                .firma-cargo { font-size:11px; color:#555; }
+                @media print { * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }
+            </style>
+        </head>
+        <body>
+            <h2>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h2>
+            <h3>SAN JUAN DE LURIGANCHO</h3>
+
+            <div class="titulo-doc">
+                <h1>📚 REFUERZO ESCOLAR</h1>
+            </div>
+            <div class="subtitulo">
+                <span class="badge">💻 Cultura Digital &nbsp;|&nbsp; 🕖 6:35 – 7:15 p.m.</span><br>
+                <b>${semana}</b>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>N°</th>
+                        <th>Día / Fecha</th>
+                        <th>Grado</th>
+                        <th>Sección</th>
+                        <th>Horario</th>
+                    </tr>
+                </thead>
+                <tbody>${filas}</tbody>
+            </table>
+
+            ${mensaje ? `<div class="mensaje-box"><b>Observaciones:</b><br>${mensaje}</div>` : ""}
+
+            <div class="firmas">
+                <div class="firma-bloque">
+                    <div class="firma-linea"></div>
+                    <div class="firma-nombre">MARY CRUZ GOMEZ SIPION</div>
+                    <div class="firma-cargo">Directora</div>
+                    <div class="firma-cargo">IE N° 0148</div>
+                </div>
+                <div class="firma-bloque">
+                    <div class="firma-linea"></div>
+                    <div class="firma-nombre">YARVIN RAMOS SOTO</div>
+                    <div class="firma-cargo">Prof. de Innovación Pedagógica</div>
+                    <div class="firma-cargo">Aula de Innovación Pedagógica</div>
+                </div>
+            </div>
+        </body>
+        </html>`);
         ventana.document.close();
-        ventana.onload = function () {
-            ventana.focus();
-            ventana.print();
-        };
+        ventana.onload = function () { ventana.focus(); ventana.print(); };
     });
 }
 </script>
