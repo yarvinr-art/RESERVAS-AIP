@@ -25,16 +25,69 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 .slot.ocupado{color:white}
 .recreo{background:#f39c12;color:white}
 .refuerzo{background:#8e44ad;color:white;font-weight:bold}
-.cd-col-header{background:linear-gradient(135deg,#0f2027,#2c5364);color:#00d4ff;font-size:10px;padding:4px 3px;border:1px solid #00d4ff;white-space:nowrap}
-.cd-slot-col{background:#e8f8ff;border:1px solid #00d4ff55;cursor:pointer;font-size:10px;padding:3px;text-align:center}
-.cd-slot-col.cd-sel{background:#00d4ff;color:#0f2027;font-weight:bold}
-.cd-slot-col.cd-ocup{background:#0f2027;color:#00d4ff}
 .admin{display:none}
 .fecha-dia{font-size:11px;font-weight:normal;opacity:0.85}
 
 /* Grado y Sección en la misma fila */
 .fila-grado-seccion{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0}
 .fila-grado-seccion select{flex:1;min-width:130px;max-width:200px}
+
+/* ===== REFUERZO ESCOLAR - CULTURA DIGITAL ===== */
+.refuerzo-box{
+  background:linear-gradient(135deg,#4a0080,#8e44ad);
+  color:white;
+  margin:10px;
+  padding:14px 12px;
+  border-radius:12px;
+  border:2px solid #d4aaff;
+  box-shadow:0 0 16px rgba(142,68,173,0.5);
+}
+.refuerzo-box h3{
+  margin:0 0 2px 0;
+  font-size:17px;
+  letter-spacing:1px;
+  color:#f0d0ff;
+}
+.refuerzo-box .pip-sub{
+  font-size:11px;
+  opacity:0.85;
+  margin-bottom:10px;
+  display:block;
+}
+.refuerzo-box select{
+  padding:6px 8px;
+  border-radius:6px;
+  border:1px solid #d4aaff;
+  background:#3a006a;
+  color:white;
+  margin:4px 2px;
+  font-size:13px;
+}
+.refuerzo-box .hora-badge{
+  display:inline-block;
+  background:#d4aaff;
+  color:#3a006a;
+  font-weight:bold;
+  border-radius:20px;
+  padding:3px 14px;
+  font-size:13px;
+  margin:6px 0;
+}
+.refuerzo-box button{
+  background:#f0d0ff;
+  color:#3a006a;
+  font-weight:bold;
+  border:none;
+  padding:7px 20px;
+  border-radius:6px;
+  cursor:pointer;
+  margin-top:8px;
+  font-size:13px;
+}
+.refuerzo-box button:hover{background:white;}
+.refuerzo-registros{margin-top:10px;width:100%;border-collapse:collapse;}
+.refuerzo-registros th{background:#3a006a;color:#f0d0ff;padding:5px;font-size:11px;}
+.refuerzo-registros td{border:1px solid #d4aaff55;padding:5px;font-size:11px;color:#f0d0ff;}
 </style>
 </head>
 
@@ -162,38 +215,64 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <button onclick="reservar()">Reservar</button>
 <button onclick="activarAdmin()">🔐 Admin</button>
 
-<!-- Mini panel Cultura Digital -->
-<div id="cdPanel" style="margin-top:10px;padding:10px;background:linear-gradient(135deg,#0f2027,#2c5364);border-radius:8px;border:1px solid #00d4ff;color:white;display:none">
-  <b style="color:#00d4ff">💻 Reservar Cultura Digital - PIP</b><br>
-  <div class="fila-grado-seccion" style="margin:6px 0">
-    <select id="cd-grado" style="flex:1;min-width:120px;max-width:180px">
-      <option value="">🎓 Grado</option>
-      <option>1° Grado</option><option>2° Grado</option><option>3° Grado</option>
-      <option>4° Grado</option><option>5° Grado</option>
-    </select>
-    <select id="cd-seccion" style="flex:1;min-width:100px;max-width:150px">
-      <option value="">🏷️ Sección</option>
-      <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>Todos</option>
+</div>
+
+<!-- ===== REFUERZO ESCOLAR - CULTURA DIGITAL ===== -->
+<div class="refuerzo-box">
+  <h3>📚 REFUERZO ESCOLAR</h3>
+  <span class="pip-sub">💻 Cultura Digital &nbsp;|&nbsp; 🧑‍🏫 Prof. de Innovación Pedagógica</span>
+
+  <div>
+    <span class="hora-badge">🕖 6:35 – 7:15 p.m.</span>
+  </div>
+
+  <div style="margin:8px 0">
+    <select id="re-semana">
+      <option value="">📅 Elige la semana</option>
+      <option>Semana del 6 al 10 Abril</option>
+      <option>Semana del 13 al 17 Abril</option>
+      <option>Semana del 20 al 24 Abril</option>
+      <option>Semana del 27 Abril al 1 Mayo</option>
+      <option>Semana del 4 al 8 Mayo</option>
+      <option>Semana del 11 al 15 Mayo</option>
+      <option>Semana del 25 al 29 Mayo</option>
+      <option>Semana del 1 al 5 Junio</option>
     </select>
   </div>
-  <select id="cd-tema" style="width:100%;margin-bottom:6px">
-    <option value="">📌 Tema Cultura Digital</option>
-    <option>Cultura Digital (sesión)</option>
-    <option>Seguridad Digital</option>
-    <option>Ciudadanía Digital</option>
-    <option>Identidad Digital</option>
-    <option>Pensamiento Computacional</option>
-    <option>Robótica / Scratch</option>
-    <option>Uso responsable de redes</option>
-    <option>Derechos digitales</option>
-    <option>Otro</option>
-  </select>
-  <button onclick="cdReservar()" style="background:#00d4ff;color:#0f2027;font-weight:bold;border:none;padding:6px 18px;border-radius:6px;cursor:pointer">📅 Registrar</button>
-</div>
 
-</div>
+  <div style="margin:6px 0">
+    <select id="re-dia">
+      <option value="">📆 Elige el día</option>
+    </select>
+  </div>
 
-<div class="container admin" id="adminPanel">
+  <div class="fila-grado-seccion" style="justify-content:center;margin:6px 0">
+    <select id="re-grado">
+      <option value="">🎓 Grado</option>
+      <option>1° Grado</option>
+      <option>2° Grado</option>
+      <option>3° Grado</option>
+      <option>4° Grado</option>
+      <option>5° Grado</option>
+    </select>
+    <select id="re-seccion">
+      <option value="">🏷️ Sección</option>
+      <option>A</option><option>B</option><option>C</option>
+      <option>D</option><option>E</option><option>Todos</option>
+    </select>
+  </div>
+
+  <div id="re-estado" style="font-size:12px;min-height:20px;margin:4px 0"></div>
+
+  <button onclick="reRegistrar()">✅ Registrar Refuerzo</button>
+
+  <div id="re-lista-wrap" style="overflow-x:auto;margin-top:10px;display:none">
+    <table class="refuerzo-registros" id="re-lista">
+      <thead><tr><th>Día</th><th>Grado</th><th>Sección</th><th>Registrado</th><th></th></tr></thead>
+      <tbody id="re-lista-body"></tbody>
+    </table>
+  </div>
+</div>
 
 <h3>Registro por Semana</h3>
 
@@ -293,13 +372,12 @@ diasConFecha.forEach(d => {
     header += `<th>${d}</th>`;
   }
 });
-header+=`<th class="cd-col-header">💻 Cultura Digital<br><span style="font-size:9px;opacity:0.85">PIP</span></th>`;
 header+="</tr>";
 tabla.innerHTML=header;
 
 horas.forEach(h=>{
 if(h==="RECREO"){
-tabla.innerHTML+=`<tr><td colspan="6" class="recreo">RECREO</td><td class="recreo" style="font-size:10px">—</td></tr>`;
+tabla.innerHTML+=`<tr><td colspan="6" class="recreo">RECREO</td></tr>`;
 return;
 }
 const esRefuerzo = h === "6:35-7:15";
@@ -308,9 +386,6 @@ dias.forEach(d=>{
 let id=d+" "+h;
 fila+=`<td class="slot${esRefuerzo ? ' refuerzo-slot' : ''}" data-id="${id}" style="${esRefuerzo ? 'background:#f3e5f5;' : ''}">Disponible</td>`;
 });
-// Columna Cultura Digital: solo una celda por fila (el PIP reserva por hora, no por día)
-const cdId="CD|"+h;
-fila+=`<td class="cd-slot-col" data-cd-id="${cdId}" style="${esRefuerzo?'border:2px solid #00d4ff;':''}">Libre</td>`;
 fila+="</tr>";
 tabla.innerHTML+=fila;
 });
@@ -328,21 +403,6 @@ return;
 }
 seleccionados.push(id);
 c.classList.add("seleccionado");
-};
-});
-
-// Click en slots de Cultura Digital
-document.querySelectorAll(".cd-slot-col").forEach(c=>{
-c.onclick=()=>{
-if(c.classList.contains("cd-ocup")) return;
-const id=c.dataset.cdId;
-if(cdSeleccionados.includes(id)){
-  cdSeleccionados=cdSeleccionados.filter(x=>x!==id);
-  c.classList.remove("cd-sel");
-} else {
-  cdSeleccionados.push(id);
-  c.classList.add("cd-sel");
-}
 };
 });
 }
@@ -482,6 +542,7 @@ if(prompt("Clave")=="yarvin2026"){
 document.getElementById("adminPanel").style.display="block";
 cargarAdmin();
 cargarGrafico();
+reCargarLista();
 }
 }
 
@@ -578,113 +639,183 @@ crearHorario();
 cargar();
 detectarQR();
 
-// ===== CULTURA DIGITAL =====
-let cdSeleccionados = [];
+// ===== REFUERZO ESCOLAR - CULTURA DIGITAL =====
+const reDias = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
 
-function cdReservar(){
-  const semana = document.getElementById("semana").value;
-  const grado  = document.getElementById("cd-grado").value;
-  const seccion= document.getElementById("cd-seccion").value;
-  const tema   = document.getElementById("cd-tema").value;
-  if(!grado)  return alert("Seleccione el grado (Cultura Digital)");
-  if(!seccion)return alert("Seleccione la sección (Cultura Digital)");
-  if(!tema)   return alert("Seleccione el tema (Cultura Digital)");
-  if(cdSeleccionados.length===0) return alert("Seleccione al menos una hora en la columna 💻");
-  const fecha = new Date().toLocaleString();
-  cdSeleccionados.forEach(id=>{
-    db.ref("culturaDigital/"+semana+"/"+id).set({
-      grado, seccion, tema, fecha, asistio: false
-    });
-  });
-  cdSeleccionados=[];
-  document.querySelectorAll(".cd-slot-col").forEach(x=>x.classList.remove("cd-sel"));
-  cdCargar();
-  alert("✅ Cultura Digital registrada");
-}
-
-function cdCargar(){
-  const semana = document.getElementById("semana").value;
-  document.querySelectorAll(".cd-slot-col").forEach(s=>{
-    if(!s.classList.contains("cd-ocup")){
-      s.style.background="";
-      s.style.color="";
-      s.textContent="Libre";
+function reActualizarDias() {
+  const semVal = document.getElementById("re-semana").value;
+  const sel = document.getElementById("re-dia");
+  sel.innerHTML = '<option value="">📆 Elige el día</option>';
+  if (!semVal) return;
+  const fechas = obtenerFechasDias(semVal);
+  fechas.forEach(d => {
+    const opt = document.createElement("option");
+    if (typeof d === "object") {
+      opt.value = d.nombre + "|" + d.dia + " " + d.mes;
+      opt.textContent = d.nombre + " " + d.dia + " " + d.mes;
+    } else {
+      opt.value = d;
+      opt.textContent = d;
     }
-    s.classList.remove("cd-ocup");
-    s.style.background="";
-    s.style.color="";
-    s.textContent="Libre";
+    sel.appendChild(opt);
   });
-  db.ref("culturaDigital/"+semana).once("value",snap=>{
-    snap.forEach(child=>{
-      document.querySelectorAll(".cd-slot-col").forEach(s=>{
-        if(s.dataset.cdId===child.key){
-          const v=child.val();
-          s.classList.add("cd-ocup");
-          s.style.background="#0f2027";
-          s.style.color="#00d4ff";
-          s.innerHTML=`<b style="font-size:9px">🎓${v.grado} ${v.seccion}</b><br><span style="font-size:8px">${v.tema||""}</span>`;
-        }
-      });
+  reCargarLista();
+}
+
+function reRegistrar() {
+  const semana  = document.getElementById("re-semana").value;
+  const diaVal  = document.getElementById("re-dia").value;
+  const grado   = document.getElementById("re-grado").value;
+  const seccion = document.getElementById("re-seccion").value;
+  if (!semana)  return alert("Selecciona la semana");
+  if (!diaVal)  return alert("Selecciona el día");
+  if (!grado)   return alert("Selecciona el grado");
+  if (!seccion) return alert("Selecciona la sección");
+
+  const diaNombre = diaVal.split("|")[0];
+  const diaFecha  = diaVal.split("|")[1] || diaNombre;
+  const key = diaNombre + "_" + grado.replace(/[°\s]/g,"") + "_" + seccion;
+  const fecha = new Date().toLocaleString();
+
+  const estado = document.getElementById("re-estado");
+
+  db.ref("refuerzoEscolar/" + semana + "/" + key).once("value", snap => {
+    if (snap.exists()) {
+      const v = snap.val();
+      estado.innerHTML = `⚠️ Ya registrado: <b>${v.grado} ${v.seccion}</b> el ${v.diaFecha}`;
+      return;
+    }
+    db.ref("refuerzoEscolar/" + semana + "/" + key).set({
+      dia: diaNombre, diaFecha, grado, seccion,
+      area: "Cultura Digital", hora: "6:35-7:15",
+      responsable: "PIP - Innovación Pedagógica",
+      fecha
+    });
+    estado.innerHTML = `✅ Registrado: <b>${grado} ${seccion}</b> — ${diaNombre} ${diaFecha}`;
+    reCargarLista();
+  });
+}
+
+function reCargarLista() {
+  const semana = document.getElementById("re-semana").value;
+  if (!semana) return;
+  // Solo mostrar la lista si el admin está activo
+  const esAdmin = document.getElementById("adminPanel").style.display === "block";
+  const wrap = document.getElementById("re-lista-wrap");
+  if (!esAdmin) { wrap.style.display = "none"; return; }
+  const tbody = document.getElementById("re-lista-body");
+  tbody.innerHTML = "";
+  db.ref("refuerzoEscolar/" + semana).once("value", snap => {
+    if (!snap.exists()) { wrap.style.display = "none"; return; }
+    wrap.style.display = "block";
+    snap.forEach(child => {
+      const v = child.val();
+      tbody.innerHTML += `<tr>
+        <td>${v.diaFecha || v.dia}</td>
+        <td>${v.grado}</td>
+        <td>${v.seccion}</td>
+        <td style="font-size:10px">${v.fecha||""}</td>
+        <td><button onclick="reEliminar('${semana}','${child.key}')" style="background:#ff6b6b;color:white;border:none;border-radius:4px;padding:2px 8px;cursor:pointer">🗑</button></td>
+      </tr>`;
     });
   });
 }
 
-// Mostrar panel CD cuando se selecciona algún slot CD
-document.addEventListener("click", e=>{
-  if(e.target.classList.contains("cd-slot-col")){
-    document.getElementById("cdPanel").style.display = cdSeleccionados.length > 0 ? "block" : "none";
-  }
-});
+function reEliminar(semana, key) {
+  if (!confirm("¿Eliminar este registro?")) return;
+  db.ref("refuerzoEscolar/" + semana + "/" + key).remove();
+  reCargarLista();
+}
 
-// Cargar CD al cambiar semana
-document.getElementById("semana").addEventListener("change", cdCargar);
-cdCargar();
+document.getElementById("re-semana").addEventListener("change", reActualizarDias);
 
 </script>
 <script>
 function imprimirHorario() {
     const contenido = document.getElementById("horarios");
-    if (!contenido) {
-        alert("No se encontró el horario");
-        return;
-    }
-    const ventana = window.open('', '_blank');
-    ventana.document.open();
-    ventana.document.write(`
-        <html>
-        <head>
-            <title>Horario AIP</title>
-            <style>
-                body { font-family: Arial; text-align: center; padding: 20px; }
-                table { border-collapse: collapse; width: 100%; }
-                th, td {
-                    border: 1px solid black;
-                    padding: 8px;
-                    text-align: center;
-                    -webkit-print-color-adjust: exact;
-                    print-color-adjust: exact;
-                }
-                .fecha-dia { font-size: 11px; font-weight: normal; opacity: 0.85; }
-                @media print {
-                    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                }
-            </style>
-        </head>
-        <body>
-            <h2>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h2>
-            <h3>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h3>
-            <h4>${document.getElementById("semana").value}</h4>
-            ${contenido.outerHTML}
-            <p><b>PIP: YARVIN RS</b></p>
-        </body>
-        </html>
-    `);
-    ventana.document.close();
-    ventana.onload = function () {
-        ventana.focus();
-        ventana.print();
-    };
+    if (!contenido) { alert("No se encontró el horario"); return; }
+
+    const semana = document.getElementById("semana").value;
+
+    // Cargar registros de Refuerzo Escolar desde Firebase antes de imprimir
+    db.ref("refuerzoEscolar/" + semana).once("value", snap => {
+        let filasRefuerzo = "";
+        if (snap.exists()) {
+            snap.forEach(child => {
+                const v = child.val();
+                filasRefuerzo += `<tr>
+                    <td>${v.diaFecha || v.dia}</td>
+                    <td>${v.grado}</td>
+                    <td>${v.seccion}</td>
+                    <td>${v.area || "Cultura Digital"}</td>
+                    <td>${v.hora || "6:35-7:15"}</td>
+                    <td>${v.responsable || "PIP"}</td>
+                </tr>`;
+            });
+        }
+
+        const refuerzoHTML = `
+        <div style="margin-top:30px; page-break-inside:avoid;">
+            <div style="background:#8e44ad;color:white;padding:8px 12px;border-radius:8px 8px 0 0;text-align:left;">
+                <strong style="font-size:14px">📚 REFUERZO ESCOLAR</strong>
+                &nbsp;&nbsp;
+                <span style="font-size:11px;opacity:0.9">💻 Cultura Digital &nbsp;|&nbsp; 🧑‍🏫 Prof. de Innovación Pedagógica &nbsp;|&nbsp; 🕖 6:35 – 7:15 p.m.</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;border:2px solid #8e44ad;">
+                <thead>
+                    <tr style="background:#f3e5f5;">
+                        <th>Día / Fecha</th>
+                        <th>Grado</th>
+                        <th>Sección</th>
+                        <th>Área</th>
+                        <th>Hora</th>
+                        <th>Responsable</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasRefuerzo || '<tr><td colspan="6" style="color:#999;font-style:italic">Sin registros para esta semana</td></tr>'}
+                </tbody>
+            </table>
+        </div>`;
+
+        const ventana = window.open('', '_blank');
+        ventana.document.open();
+        ventana.document.write(`
+            <html>
+            <head>
+                <title>Horario AIP</title>
+                <style>
+                    body { font-family: Arial; text-align: center; padding: 20px; }
+                    table { border-collapse: collapse; width: 100%; }
+                    th, td {
+                        border: 1px solid black;
+                        padding: 8px;
+                        text-align: center;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .fecha-dia { font-size: 11px; font-weight: normal; opacity: 0.85; }
+                    @media print {
+                        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h2>IE N° 0148 MAESTRO VÍCTOR RAÚL HAYA DE LA TORRE</h2>
+                <h3>AULA DE INNOVACIÓN PEDAGÓGICA - SECUNDARIA</h3>
+                <h4>${semana}</h4>
+                ${contenido.outerHTML}
+                <p><b>PIP: YARVIN RS</b></p>
+                ${refuerzoHTML}
+            </body>
+            </html>
+        `);
+        ventana.document.close();
+        ventana.onload = function () {
+            ventana.focus();
+            ventana.print();
+        };
+    });
 }
 </script>
 </body>
