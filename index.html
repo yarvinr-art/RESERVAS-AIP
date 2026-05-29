@@ -25,55 +25,16 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 .slot.ocupado{color:white}
 .recreo{background:#f39c12;color:white}
 .refuerzo{background:#8e44ad;color:white;font-weight:bold}
+.cd-col-header{background:linear-gradient(135deg,#0f2027,#2c5364);color:#00d4ff;font-size:10px;padding:4px 3px;border:1px solid #00d4ff;white-space:nowrap}
+.cd-slot-col{background:#e8f8ff;border:1px solid #00d4ff55;cursor:pointer;font-size:10px;padding:3px;text-align:center}
+.cd-slot-col.cd-sel{background:#00d4ff;color:#0f2027;font-weight:bold}
+.cd-slot-col.cd-ocup{background:#0f2027;color:#00d4ff}
 .admin{display:none}
 .fecha-dia{font-size:11px;font-weight:normal;opacity:0.85}
 
 /* Grado y Sección en la misma fila */
 .fila-grado-seccion{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0}
 .fila-grado-seccion select{flex:1;min-width:130px;max-width:200px}
-
-/* ===== CULTURA DIGITAL ===== */
-.cultura-digital-box {
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-  color: white;
-  margin: 10px;
-  padding: 14px 10px;
-  border-radius: 12px;
-  border: 2px solid #00d4ff;
-  box-shadow: 0 0 18px rgba(0,212,255,0.3);
-}
-.cultura-digital-box h3 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-  color: #00d4ff;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-.cultura-digital-box .pip-badge {
-  display: inline-block;
-  background: #00d4ff;
-  color: #0f2027;
-  border-radius: 20px;
-  padding: 2px 12px;
-  font-size: 11px;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-.cultura-digital-box select, .cultura-digital-box button {
-  margin: 4px 2px;
-}
-.cultura-digital-box table th {
-  background: #00d4ff;
-  color: #0f2027;
-}
-.cultura-digital-box table td {
-  border-color: #00d4ff44;
-  font-size: 11px;
-}
-.cd-slot { cursor: pointer; background: #1a3a4a; color: #aaa; }
-.cd-slot.cd-seleccionado { background: #00d4ff; color: #0f2027; font-weight: bold; }
-.cd-slot.cd-ocupado { color: white; }
-.cd-recreo { background: #f39c12; color: white; font-weight: bold; }
 </style>
 </head>
 
@@ -145,7 +106,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <option>CAPACITACIÓN - CCSS</option>
 <option>CAPACITACIÓN - EPT</option>
 <option>CAPACITACIÓN</option>
-<option value="REFUERZO ESCOLAR">📚 REFUERZO ESCOLAR</option>
+<option>REFUERZO ESCOLAR</option>
 <option>YARVIN RAMOS SOTO</option>
 <option>MANTENIMIENTO SEMANAL</option>
 <option>LIBRE</option>
@@ -201,60 +162,38 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 <button onclick="reservar()">Reservar</button>
 <button onclick="activarAdmin()">🔐 Admin</button>
 
-</div>
-
-<!-- ===== CULTURA DIGITAL - PIP ===== -->
-<div class="cultura-digital-box">
-  <h3>💻 Cultura Digital</h3>
-  <span class="pip-badge">🧑‍🏫 Prof. de Innovación Pedagógica</span>
-
-  <div>
-    <select id="cd-semana">
-      <option>Semana del 6 al 10 Abril</option>
-      <option>Semana del 13 al 17 Abril</option>
-      <option>Semana del 20 al 24 Abril</option>
-      <option>Semana del 27 Abril al 1 Mayo</option>
-      <option>Semana del 4 al 8 Mayo</option>
-      <option>Semana del 11 al 15 Mayo</option>
-      <option>Semana del 25 al 29 Mayo</option>
-      <option>Semana del 1 al 5 Junio</option>
+<!-- Mini panel Cultura Digital -->
+<div id="cdPanel" style="margin-top:10px;padding:10px;background:linear-gradient(135deg,#0f2027,#2c5364);border-radius:8px;border:1px solid #00d4ff;color:white;display:none">
+  <b style="color:#00d4ff">💻 Reservar Cultura Digital - PIP</b><br>
+  <div class="fila-grado-seccion" style="margin:6px 0">
+    <select id="cd-grado" style="flex:1;min-width:120px;max-width:180px">
+      <option value="">🎓 Grado</option>
+      <option>1° Grado</option><option>2° Grado</option><option>3° Grado</option>
+      <option>4° Grado</option><option>5° Grado</option>
     </select>
-
-    <div class="fila-grado-seccion" style="justify-content:center;margin:6px 0">
-      <select id="cd-grado" style="flex:1;min-width:130px;max-width:200px">
-        <option value="">🎓 Grado</option>
-        <option>1° Grado</option>
-        <option>2° Grado</option>
-        <option>3° Grado</option>
-        <option>4° Grado</option>
-        <option>5° Grado</option>
-      </select>
-      <select id="cd-seccion" style="flex:1;min-width:130px;max-width:200px">
-        <option value="">🏷️ Sección</option>
-        <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>Todos</option>
-      </select>
-    </div>
-
-    <select id="cd-tema">
-      <option value="">📌 Tema de Cultura Digital</option>
-      <option>Cultura Digital (sesión)</option>
-      <option>Seguridad Digital</option>
-      <option>Ciudadanía Digital</option>
-      <option>Identidad Digital</option>
-      <option>Pensamiento Computacional</option>
-      <option>Robótica / Scratch</option>
-      <option>Uso responsable de redes</option>
-      <option>Derechos digitales</option>
-      <option>Otro</option>
+    <select id="cd-seccion" style="flex:1;min-width:100px;max-width:150px">
+      <option value="">🏷️ Sección</option>
+      <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>Todos</option>
     </select>
-
-    <div id="cd-horarios" style="overflow-x:auto;margin-top:8px"></div>
-
-    <button onclick="cdReservar()" style="background:#00d4ff;color:#0f2027;font-weight:bold;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;margin-top:6px">
-      📅 Registrar sesión
-    </button>
   </div>
+  <select id="cd-tema" style="width:100%;margin-bottom:6px">
+    <option value="">📌 Tema Cultura Digital</option>
+    <option>Cultura Digital (sesión)</option>
+    <option>Seguridad Digital</option>
+    <option>Ciudadanía Digital</option>
+    <option>Identidad Digital</option>
+    <option>Pensamiento Computacional</option>
+    <option>Robótica / Scratch</option>
+    <option>Uso responsable de redes</option>
+    <option>Derechos digitales</option>
+    <option>Otro</option>
+  </select>
+  <button onclick="cdReservar()" style="background:#00d4ff;color:#0f2027;font-weight:bold;border:none;padding:6px 18px;border-radius:6px;cursor:pointer">📅 Registrar</button>
 </div>
+
+</div>
+
+<div class="container admin" id="adminPanel">
 
 <h3>Registro por Semana</h3>
 
@@ -354,12 +293,13 @@ diasConFecha.forEach(d => {
     header += `<th>${d}</th>`;
   }
 });
+header+=`<th class="cd-col-header">💻 Cultura Digital<br><span style="font-size:9px;opacity:0.85">PIP</span></th>`;
 header+="</tr>";
 tabla.innerHTML=header;
 
 horas.forEach(h=>{
 if(h==="RECREO"){
-tabla.innerHTML+=`<tr><td colspan="6" class="recreo">RECREO</td></tr>`;
+tabla.innerHTML+=`<tr><td colspan="6" class="recreo">RECREO</td><td class="recreo" style="font-size:10px">—</td></tr>`;
 return;
 }
 const esRefuerzo = h === "6:35-7:15";
@@ -368,6 +308,9 @@ dias.forEach(d=>{
 let id=d+" "+h;
 fila+=`<td class="slot${esRefuerzo ? ' refuerzo-slot' : ''}" data-id="${id}" style="${esRefuerzo ? 'background:#f3e5f5;' : ''}">Disponible</td>`;
 });
+// Columna Cultura Digital: solo una celda por fila (el PIP reserva por hora, no por día)
+const cdId="CD|"+h;
+fila+=`<td class="cd-slot-col" data-cd-id="${cdId}" style="${esRefuerzo?'border:2px solid #00d4ff;':''}">Libre</td>`;
 fila+="</tr>";
 tabla.innerHTML+=fila;
 });
@@ -385,6 +328,21 @@ return;
 }
 seleccionados.push(id);
 c.classList.add("seleccionado");
+};
+});
+
+// Click en slots de Cultura Digital
+document.querySelectorAll(".cd-slot-col").forEach(c=>{
+c.onclick=()=>{
+if(c.classList.contains("cd-ocup")) return;
+const id=c.dataset.cdId;
+if(cdSeleccionados.includes(id)){
+  cdSeleccionados=cdSeleccionados.filter(x=>x!==id);
+  c.classList.remove("cd-sel");
+} else {
+  cdSeleccionados.push(id);
+  c.classList.add("cd-sel");
+}
 };
 });
 }
@@ -620,118 +578,67 @@ crearHorario();
 cargar();
 detectarQR();
 
-// ============ CULTURA DIGITAL ============
-const cdHoras = ["1:00-1:45","1:45-2:30","2:30-3:15","3:15-4:00","RECREO","4:20-5:05","5:05-5:50","5:50-6:35","6:35-7:15"];
+// ===== CULTURA DIGITAL =====
 let cdSeleccionados = [];
 
-function cdCrearHorario() {
-  const semana = document.getElementById("cd-semana").value;
-  const diasConFecha = obtenerFechasDias(semana);
-  const cont = document.getElementById("cd-horarios");
-  cont.innerHTML = "";
-  const tabla = document.createElement("table");
-  tabla.style.width = "100%";
-  tabla.style.borderCollapse = "collapse";
-
-  let header = "<tr><th style='background:#00d4ff;color:#0f2027;padding:6px;font-size:11px'>Hora</th>";
-  diasConFecha.forEach(d => {
-    if (typeof d === "object") {
-      header += `<th style='background:#00d4ff;color:#0f2027;padding:5px;font-size:11px'>${d.nombre}<br><span style='font-size:10px;opacity:0.8'>${d.dia} ${d.mes}</span></th>`;
-    } else {
-      header += `<th style='background:#00d4ff;color:#0f2027;padding:5px;font-size:11px'>${d}</th>`;
-    }
-  });
-  header += "</tr>";
-  tabla.innerHTML = header;
-
-  cdHoras.forEach(h => {
-    if (h === "RECREO") {
-      tabla.innerHTML += `<tr><td colspan="6" class="cd-recreo" style="padding:5px;font-size:11px;text-align:center">RECREO</td></tr>`;
-      return;
-    }
-    let fila = `<tr><td style="padding:5px;font-size:10px;border:1px solid #00d4ff44;background:#1a3a4a;color:#aad4ff;white-space:nowrap">${h}</td>`;
-    dias.forEach(d => {
-      const id = "CD|" + d + " " + h;
-      fila += `<td class="cd-slot" data-cd-id="${id}" style="padding:4px;border:1px solid #00d4ff44;font-size:10px;text-align:center;cursor:pointer">Libre</td>`;
+function cdReservar(){
+  const semana = document.getElementById("semana").value;
+  const grado  = document.getElementById("cd-grado").value;
+  const seccion= document.getElementById("cd-seccion").value;
+  const tema   = document.getElementById("cd-tema").value;
+  if(!grado)  return alert("Seleccione el grado (Cultura Digital)");
+  if(!seccion)return alert("Seleccione la sección (Cultura Digital)");
+  if(!tema)   return alert("Seleccione el tema (Cultura Digital)");
+  if(cdSeleccionados.length===0) return alert("Seleccione al menos una hora en la columna 💻");
+  const fecha = new Date().toLocaleString();
+  cdSeleccionados.forEach(id=>{
+    db.ref("culturaDigital/"+semana+"/"+id).set({
+      grado, seccion, tema, fecha, asistio: false
     });
-    fila += "</tr>";
-    tabla.innerHTML += fila;
   });
-
-  cont.appendChild(tabla);
-
-  document.querySelectorAll(".cd-slot").forEach(c => {
-    c.onclick = () => {
-      if (c.classList.contains("cd-ocupado")) return;
-      const id = c.dataset.cdId;
-      if (cdSeleccionados.includes(id)) {
-        cdSeleccionados = cdSeleccionados.filter(x => x !== id);
-        c.classList.remove("cd-seleccionado");
-      } else {
-        cdSeleccionados.push(id);
-        c.classList.add("cd-seleccionado");
-      }
-    };
-  });
+  cdSeleccionados=[];
+  document.querySelectorAll(".cd-slot-col").forEach(x=>x.classList.remove("cd-sel"));
+  cdCargar();
+  alert("✅ Cultura Digital registrada");
 }
 
-function cdCargar() {
-  const semana = document.getElementById("cd-semana").value;
-  document.querySelectorAll(".cd-slot").forEach(s => {
-    s.classList.remove("cd-ocupado");
-    s.style.background = "";
-    s.style.color = "";
-    s.textContent = "Libre";
+function cdCargar(){
+  const semana = document.getElementById("semana").value;
+  document.querySelectorAll(".cd-slot-col").forEach(s=>{
+    if(!s.classList.contains("cd-ocup")){
+      s.style.background="";
+      s.style.color="";
+      s.textContent="Libre";
+    }
+    s.classList.remove("cd-ocup");
+    s.style.background="";
+    s.style.color="";
+    s.textContent="Libre";
   });
-  db.ref("culturaDigital/" + semana).once("value", snap => {
-    snap.forEach(child => {
-      document.querySelectorAll(".cd-slot").forEach(s => {
-        if (s.dataset.cdId === child.key) {
-          const grado = child.val().grado || "";
-          const seccion = child.val().seccion || "";
-          const tema = child.val().tema || "";
-          s.classList.add("cd-ocupado");
-          s.style.background = "#00d4ff";
-          s.style.color = "#0f2027";
-          s.innerHTML = `<b style='font-size:9px'>📚 ${grado} ${seccion}</b>${tema ? `<br><span style='font-size:9px'>${tema}</span>` : ""}`;
+  db.ref("culturaDigital/"+semana).once("value",snap=>{
+    snap.forEach(child=>{
+      document.querySelectorAll(".cd-slot-col").forEach(s=>{
+        if(s.dataset.cdId===child.key){
+          const v=child.val();
+          s.classList.add("cd-ocup");
+          s.style.background="#0f2027";
+          s.style.color="#00d4ff";
+          s.innerHTML=`<b style="font-size:9px">🎓${v.grado} ${v.seccion}</b><br><span style="font-size:8px">${v.tema||""}</span>`;
         }
       });
     });
   });
 }
 
-function cdReservar() {
-  const semana = document.getElementById("cd-semana").value;
-  const grado = document.getElementById("cd-grado").value;
-  const seccion = document.getElementById("cd-seccion").value;
-  const tema = document.getElementById("cd-tema").value;
-  if (!grado) return alert("Seleccione el grado");
-  if (!seccion) return alert("Seleccione la sección");
-  if (!tema) return alert("Seleccione el tema");
-  if (cdSeleccionados.length === 0) return alert("Seleccione al menos un horario");
-
-  const fecha = new Date().toLocaleString();
-  cdSeleccionados.forEach(id => {
-    db.ref("culturaDigital/" + semana + "/" + id).set({
-      nombre: "PIP - Cultura Digital",
-      grado, seccion, tema,
-      asistio: false,
-      fecha
-    });
-  });
-
-  cdSeleccionados = [];
-  document.querySelectorAll(".cd-slot").forEach(x => x.classList.remove("cd-seleccionado"));
-  cdCargar();
-  alert("✅ Sesión de Cultura Digital registrada");
-}
-
-document.getElementById("cd-semana").addEventListener("change", () => {
-  cdCrearHorario();
-  cdCargar();
+// Mostrar panel CD cuando se selecciona algún slot CD
+document.addEventListener("click", e=>{
+  if(e.target.classList.contains("cd-slot-col")){
+    document.getElementById("cdPanel").style.display = cdSeleccionados.length > 0 ? "block" : "none";
+  }
 });
 
-cdCrearHorario();
+// Cargar CD al cambiar semana
+document.getElementById("semana").addEventListener("change", cdCargar);
 cdCargar();
 
 </script>
