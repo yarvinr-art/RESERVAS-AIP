@@ -103,16 +103,7 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 
 <div class="container">
 
-<select id="semana">
-<option>Semana del 6 al 10 Abril</option>
-<option>Semana del 13 al 17 Abril</option>
-<option>Semana del 20 al 24 Abril</option>
-<option>Semana del 27 Abril al 1 Mayo</option>
-<option>Semana del 4 al 8 Mayo</option>
-<option>Semana del 11 al 15 Mayo</option>
-<option>Semana del 25 al 29 Mayo</option>
-<option>Semana del 1 al 5 Junio</option>
-</select>
+<select id="semana"></select>
 
 <br>
 
@@ -229,14 +220,6 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
   <div style="margin:8px 0">
     <select id="re-semana">
       <option value="">📅 Elige la semana</option>
-      <option>Semana del 6 al 10 Abril</option>
-      <option>Semana del 13 al 17 Abril</option>
-      <option>Semana del 20 al 24 Abril</option>
-      <option>Semana del 27 Abril al 1 Mayo</option>
-      <option>Semana del 4 al 8 Mayo</option>
-      <option>Semana del 11 al 15 Mayo</option>
-      <option>Semana del 25 al 29 Mayo</option>
-      <option>Semana del 1 al 5 Junio</option>
     </select>
   </div>
 
@@ -310,30 +293,66 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
 
 <script>
 
-// FECHAS DE INICIO (Lunes) POR SEMANA
-const fechasInicioSemana = {
-  "Semana del 6 al 10 Abril":       new Date(2025, 3, 6),
-  "Semana del 13 al 17 Abril":      new Date(2025, 3, 13),
-  "Semana del 20 al 24 Abril":      new Date(2025, 3, 20),
-  "Semana del 27 Abril al 1 Mayo":  new Date(2025, 3, 27),
-  "Semana del 4 al 8 Mayo":         new Date(2025, 4, 4),
-  "Semana del 11 al 15 Mayo":       new Date(2025, 4, 11),
-  "Semana del 25 al 29 Mayo":       new Date(2025, 4, 25),
-  "Semana del 1 al 5 Junio":        new Date(2025, 5, 1),
-};
+// ── GENERADOR AUTOMÁTICO DE SEMANAS ──────────────────────────
+// Solo ajusta estas dos fechas al inicio de cada año escolar:
+const INICIO_AÑO = new Date(2025, 3, 6);    // 6 de Abril 2025 (primer lunes lectivo)
+const FIN_AÑO    = new Date(2025, 11, 19);  // 19 de Diciembre 2025 (último viernes)
+
+// Semanas que NO generan boleta PDF — agrega el ISO del lunes (YYYY-MM-DD)
+const semanasSinBoletaFechas = new Set([
+  "2025-04-20","2025-04-27","2025-05-04","2025-05-11","2025-05-25","2025-06-01"
+]);
 
 const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const mesesLargo = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                    "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-function obtenerFechasDias(semana) {
-  const inicio = fechasInicioSemana[semana];
-  if (!inicio) return ["Lunes","Martes","Miércoles","Jueves","Viernes"];
+function isoLunes(fecha) {
+  // Devuelve YYYY-MM-DD en hora local (evita desfase UTC)
+  const y = fecha.getFullYear();
+  const m = String(fecha.getMonth()+1).padStart(2,"0");
+  const d = String(fecha.getDate()).padStart(2,"0");
+  return `${y}-${m}-${d}`;
+}
+
+function labelSemana(lunes) {
+  const viernes = new Date(lunes);
+  viernes.setDate(lunes.getDate() + 4);
+  const dm = d => d.getDate() + " " + mesesLargo[d.getMonth()];
+  if (lunes.getMonth() === viernes.getMonth()) {
+    return `Semana del ${lunes.getDate()} al ${dm(viernes)}`;
+  }
+  return `Semana del ${dm(lunes)} al ${dm(viernes)}`;
+}
+
+function generarSemanas() {
+  const semanas = [];
+  const cur = new Date(INICIO_AÑO);
+  while (cur <= FIN_AÑO) {
+    semanas.push({ label: labelSemana(cur), lunes: new Date(cur), isoKey: isoLunes(cur) });
+    cur.setDate(cur.getDate() + 7);
+  }
+  return semanas;
+}
+
+const SEMANAS = generarSemanas();
+
+function obtenerFechasDias(labelBuscado) {
+  const s = SEMANAS.find(s => s.label === labelBuscado);
+  if (!s) return ["Lunes","Martes","Miércoles","Jueves","Viernes"];
   const nombres = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
   return nombres.map((dia, i) => {
-    const fecha = new Date(inicio);
-    fecha.setDate(inicio.getDate() + i);
+    const fecha = new Date(s.lunes);
+    fecha.setDate(s.lunes.getDate() + i);
     return { nombre: dia, dia: fecha.getDate(), mes: meses[fecha.getMonth()] };
   });
 }
+
+function esSemanaConBoleta(label) {
+  const s = SEMANAS.find(s => s.label === label);
+  return s ? !semanasSinBoletaFechas.has(s.isoKey) : true;
+}
+// ─────────────────────────────────────────────────────────────
 
 function obtenerColor(nombre){
 let hash=0;
@@ -416,15 +435,7 @@ c.classList.add("seleccionado");
 });
 }
 
-// SEMANAS SIN BOLETA PDF
-const semanasSinBoleta = [
-  "Semana del 20 al 24 Abril",
-  "Semana del 27 Abril al 1 Mayo",
-  "Semana del 4 al 8 Mayo",
-  "Semana del 11 al 15 Mayo",
-  "Semana del 25 al 29 Mayo",
-  "Semana del 1 al 5 Junio"
-];
+
 
 // RESERVAR
 function reservar(){
@@ -455,7 +466,7 @@ fecha:fecha
 });
 
 // Verificar si esta semana genera boleta
-if(semanasSinBoleta.includes(semana)){
+if(!esSemanaConBoleta(semana)){
   seleccionados=[];
   document.querySelectorAll(".slot").forEach(x=>x.classList.remove("seleccionado"));
   cargar();
@@ -644,9 +655,23 @@ document.getElementById("docente").addEventListener("change", function() {
   }
 });
 
-crearHorario();
-cargar();
-detectarQR();
+// ── Poblar selects de semana y seleccionar la más cercana a hoy ──
+(function poblarSemanas() {
+  const selMain = document.getElementById("semana");
+  const selRe   = document.getElementById("re-semana");
+  SEMANAS.forEach(s => {
+    selMain.add(new Option(s.label, s.label));
+    selRe.add(new Option(s.label, s.label));
+  });
+  // Seleccionar la semana cuyo lunes sea <= hoy (la más reciente)
+  const hoy = new Date();
+  let mejor = 0;
+  SEMANAS.forEach((s, i) => { if (s.lunes <= hoy) mejor = i; });
+  selMain.selectedIndex = mejor;
+  crearHorario();
+  cargar();
+  detectarQR();
+})();
 
 // ===== REFUERZO ESCOLAR - CULTURA DIGITAL =====
 const reDias = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
