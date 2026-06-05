@@ -180,6 +180,23 @@ td{border:1px solid #ccc;padding:6px;font-size:12px;text-align:center}
   </select>
 </div>
 
+<!-- Select de área: solo visible cuando se elige CAPACITACIÓN -->
+<select id="area-capacitacion" style="display:none;margin:4px 0">
+  <option value="">📐 Elige el área</option>
+  <option>CYT - Ciencia y Tecnología</option>
+  <option>ARTE - Arte y Cultura</option>
+  <option>DPCC - Desarrollo Personal</option>
+  <option>INGLÉS</option>
+  <option>RELIGIÓN</option>
+  <option>CCSS - Ciencias Sociales</option>
+  <option>EPT - Educación para el Trabajo</option>
+  <option>COMUNICACIÓN</option>
+  <option>MATEMÁTICA</option>
+  <option>ED. FÍSICA</option>
+  <option>TUTORÍA</option>
+  <option>General / Todas las áreas</option>
+</select>
+
 <select id="tema">
 <option value="">📚 Elige el motivo</option>
 <option>Placement Test</option>
@@ -446,7 +463,7 @@ const esMantenimiento = docente === "MANTENIMIENTO SEMANAL";
 const esCapacitacion  = docente.startsWith("CAPACITACIÓN");
 const eximirGS = esMantenimiento || esCapacitacion;
 const grado=eximirGS ? (esCapacitacion ? "Capacitación" : "PIP") : document.getElementById("grado").value;
-const seccion=eximirGS ? (esCapacitacion ? "—" : "(YARVIN RS)") : document.getElementById("seccion").value;
+const seccion=eximirGS ? (esCapacitacion ? (document.getElementById("area-capacitacion").value || "—") : "(YARVIN RS)") : document.getElementById("seccion").value;
 
 if(!docente)return alert("Seleccione docente");
 if(!esMantenimiento && !esCapacitacion && !grado)return alert("Seleccione el grado");
@@ -658,6 +675,10 @@ document.getElementById("docente").addEventListener("change", function() {
     document.getElementById("grado").value = "";
     document.getElementById("seccion").value = "";
   }
+  // Mostrar select de área solo para CAPACITACIÓN
+  const selArea = document.getElementById("area-capacitacion");
+  selArea.style.display = esCapacitacion ? "block" : "none";
+  if (!esCapacitacion) selArea.value = "";
 });
 
 // ── Poblar selects de semana y seleccionar la más cercana a hoy ──
