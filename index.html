@@ -443,12 +443,14 @@ const docente=document.getElementById("docente").value;
 const semana=document.getElementById("semana").value;
 const tema=document.getElementById("tema").value;
 const esMantenimiento = docente === "MANTENIMIENTO SEMANAL";
-const grado=esMantenimiento ? "PIP" : document.getElementById("grado").value;
-const seccion=esMantenimiento ? "(YARVIN RS)" : document.getElementById("seccion").value;
+const esCapacitacion  = docente.startsWith("CAPACITACIÓN");
+const eximirGS = esMantenimiento || esCapacitacion;
+const grado=eximirGS ? (esCapacitacion ? "Capacitación" : "PIP") : document.getElementById("grado").value;
+const seccion=eximirGS ? (esCapacitacion ? "—" : "(YARVIN RS)") : document.getElementById("seccion").value;
 
 if(!docente)return alert("Seleccione docente");
-if(!esMantenimiento && !grado)return alert("Seleccione el grado");
-if(!esMantenimiento && !seccion)return alert("Seleccione la sección");
+if(!esMantenimiento && !esCapacitacion && !grado)return alert("Seleccione el grado");
+if(!esMantenimiento && !esCapacitacion && !seccion)return alert("Seleccione la sección");
 if(!tema)return alert("Seleccione el tema de la sesión");
 if(seleccionados.length===0)return alert("Seleccione horario");
 
@@ -646,10 +648,13 @@ document.getElementById("semana").addEventListener("change",()=>{
 
 // Lógica MANTENIMIENTO SEMANAL: oculta grado/sección, muestra PIP como responsable
 document.getElementById("docente").addEventListener("change", function() {
-  const esMantenimiento = this.value === "MANTENIMIENTO SEMANAL";
+  const v = this.value;
+  const esMantenimiento = v === "MANTENIMIENTO SEMANAL";
+  const esCapacitacion  = v.startsWith("CAPACITACIÓN");
+  const ocultarGS = esMantenimiento || esCapacitacion;
   const filaGS = document.getElementById("filaGradoSeccion");
-  filaGS.style.display = esMantenimiento ? "none" : "flex";
-  if (esMantenimiento) {
+  filaGS.style.display = ocultarGS ? "none" : "flex";
+  if (ocultarGS) {
     document.getElementById("grado").value = "";
     document.getElementById("seccion").value = "";
   }
